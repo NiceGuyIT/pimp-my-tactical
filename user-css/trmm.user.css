@@ -1,0 +1,32 @@
+/* ==UserStyle==
+@name			TacticalRMM
+@namespace		github.com/NiceGuyIT/trmm-goodies/user-css
+@version		1.0.0
+@description	TacitcalRMM user styles to improve usability.
+@author			NiceGuyIT
+==/UserStyle== */
+
+
+@-moz-document regexp("https://rmm\\..*") {
+
+	/* Change the font for better visibility */
+	.editor {
+		/* font-family: "Fira code", Consolas, Menlo, Courier, monospace; */
+		font-family: "FiraCode Nerd Font Mono", "Fira code", "DejaVu Sans Mono", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Ubuntu, Cantarell, Helvetica Neue, Arial, sans-serif;
+	}
+
+	/* Expand the Notes box to the size of the window. */
+	.q-dialog-plugin__form {
+		max-height: inherit;
+	}
+	div > div.q-dialog > div.q-dialog__inner > div.q-dialog-plugin {
+		width: 90vw !important;
+		max-width: 90vw !important;
+		background: darkslateblue;
+	}
+	div > div.q-dialog > div.q-dialog__inner > div.q-dialog-plugin .q-textarea textarea {
+		height: 80vh;
+	}
+
+}
+
