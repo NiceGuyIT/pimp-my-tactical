@@ -9,8 +9,8 @@ The user styles are used by [Stylus](https://github.com/openstyles/stylus) to ch
 website. After installing Sytlus, click on the raw button and Stylus will prompt you to install the
 user css.
 
-- [TacticalRMM Color](./user-css/trmm-color.user.css) will add some color to TacticalRMM.
-- [TacticalRMM Usability](./user-css/trmm-usability.user.css) will make minor changes to improve
+- [TacticalRMM Color](./user-css/tacticalrmm-color.user.css) will add some color to TacticalRMM.
+- [TacticalRMM Usability](./user-css/tacticalrmm-usability.user.css) will make minor changes to improve
   usability of TacticalRMM.
 
 ## Search Custom Fields
