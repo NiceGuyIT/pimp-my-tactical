@@ -1,0 +1,18 @@
+/* ==UserStyle==
+@name			TacticalRMM color
+@namespace		github.com/NiceGuyIT/trmm-goodies/user-css
+@version		1.0.0
+@description	Add some color to TacitcalRMM.
+@author			NiceGuyIT
+==/UserStyle== */
+
+
+@-moz-document regexp("https://rmm\\..*") {
+
+	/* Change the background of the Notes window. */
+	div > div.q-dialog > div.q-dialog__inner > div.q-dialog-plugin {
+		background: darkslateblue;
+	}
+
+}
+
