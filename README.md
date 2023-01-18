@@ -10,7 +10,7 @@ website. After installing Sytlus, click on the raw button and Stylus will prompt
 user css.
 
 - [TacticalRMM Color](./user-css/trmm-color.user.css) will add some color to TacticalRMM.
-- [TacticalRMM Usability](./user-css/trmm-color.user.css) will make minor changes to improve
+- [TacticalRMM Usability](./user-css/trmm-usability.user.css) will make minor changes to improve
   usability of TacticalRMM.
 
 ## Search Custom Fields
@@ -19,4 +19,7 @@ Add this javascript as a bookmark to your browser. Click on the bookmark and ent
 the custom fields. View the [original
 post](https://discord.com/channels/736478043522072608/1006998861400776824/1006998861400776824) on
 Discord.
+
+- [Search Custom Fields](./search-custom-fields/search-custom-fields.js) will add some color to
+  TacticalRMM.
 
