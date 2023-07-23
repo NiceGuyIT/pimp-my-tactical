@@ -54,7 +54,7 @@ $TaskName = "Restore-Explorer-Bookmarks"
 $FilenamePattern = $( '{0}-*.txt' -f $FilenamePrefix )
 
 # BookmarkFilename is the current bookmark file to create
-$BookmarkFilename = $( '{0}-{1}.txt' -f $FilenamePrefix, $( Get-Date -format "yyyyMMdd-hhmmss" ) )
+$BookmarkFilename = $( '{0}-{1}.txt' -f $FilenamePrefix, $( Get-Date -format "yyyyMMdd-HHmmss" ) )
 
 # ENV:EB_RESTORE_MAX_FILE_SIZE is the maximum file size to restore
 # Default: 10k
