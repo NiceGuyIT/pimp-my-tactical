@@ -1,0 +1,147 @@
+[
+  {
+    "guid": "7114148f-bbb5-47b1-812a-270727050f57",
+    "filename": "scripts/synology_abfb_example-01.py",
+    "submittedBy": "https://github.com/NiceGuyIT",
+    "name": "🛠️ synology_abfb_example-01",
+    "description": "Parse Active Backup for Business log files",
+    "syntax": "",
+    "args": [
+      "--ago-value=40",
+      "--ago-unit=days"
+    ],
+    "default_timeout": 90,
+    "shell": "python",
+    "supported_platforms": [],
+    "category": "TRMM (Win):3rd Party Software>Monitoring"
+  },
+  {
+    "guid": "37e9848f-f8e3-44fb-8e6e-e887d82e00e1",
+    "filename": "scripts/synology_abfb_example-02.py",
+    "submittedBy": "https://github.com/NiceGuyIT",
+    "name": "🛠️ synology_abfb_example-02",
+    "description": "Parse Active Backup for Business log files",
+    "syntax": "",
+    "args": [
+      "--ago-value=40",
+      "--ago-unit=days",
+      "--complete-days-ago=30"
+    ],
+    "default_timeout": 90,
+    "shell": "python",
+    "supported_platforms": [],
+    "category": "TRMM (Win):3rd Party Software>Monitoring"
+  },
+  {
+    "guid": "038c5232-a5cc-4c67-9714-9c10e0b1355c",
+    "filename": "scripts/synology_abfb_example-03.py",
+    "submittedBy": "https://github.com/NiceGuyIT",
+    "name": "🛠️ synology_abfb_example-03",
+    "description": "Parse Active Backup for Business log files",
+    "syntax": "",
+    "args": [
+      "--ago-value=40",
+      "--ago-unit=days"
+    ],
+    "default_timeout": 90,
+    "shell": "python",
+    "supported_platforms": [],
+    "category": "TRMM (Win):3rd Party Software>Monitoring"
+  },
+  {
+    "guid": "b5437513-4f2c-4a97-bfd1-fdc4bf090407",
+    "filename": "scripts/all-python-module-manager.py",
+    "submittedBy": "tactical",
+    "name": "🐍 Python 3.10 - Module Manager",
+    "description": "List/Check/Install/Remove/Update modules in the Python 3.10 distribution",
+    "syntax": "help\ninfo [--verbose|--no-verbose]\nlist [--format=<string>]\ncheck <string>...\ninstall <string>...\nuninstall <string>...\nupgrade <string>...",
+    "args": [],
+    "default_timeout": 60,
+    "shell": "python",
+    "supported_platforms": [
+      "windows",
+      "linux",
+      "darwin"
+    ],
+    "category": "TRMM (All):3rd Party Software"
+  },
+  {
+    "guid": "aa203e6c-3f4b-44d3-aca7-b6ec4588ca06",
+    "filename": "scripts/all-python-modules-help.py",
+    "submittedBy": "tactical",
+    "name": "🐍 List Python 3.10 Modules - Help",
+    "description": "List the Python 3.10 modules as shown by 'help(\"modules\")'",
+    "syntax": "",
+    "args": [],
+    "default_timeout": 90,
+    "shell": "python",
+    "supported_platforms": [
+      "linux",
+      "darwin",
+      "windows"
+    ],
+    "category": "TRMM (All):3rd Party Software"
+  },
+  {
+    "guid": "c8b82e3c-0c1d-4aef-855d-c7dd36e8430c",
+    "filename": "scripts/all-python-modules-pip-list.py",
+    "submittedBy": "tactical",
+    "name": "🐍 List Python 3.10 Modules - pip list",
+    "description": "List the Python 3.10 modules as shown by 'pip list'",
+    "syntax": "",
+    "args": [],
+    "default_timeout": 90,
+    "shell": "python",
+    "supported_platforms": [
+      "linux",
+      "darwin",
+      "windows"
+    ],
+    "category": "TRMM (All):3rd Party Software"
+  },
+  {
+    "guid": "262277a5-c515-40f9-ba14-74b5db6b46be",
+    "filename": "scripts/all-python-modules-version.py",
+    "submittedBy": "tactical",
+    "name": "🐍 Get the Python 3.10 Version",
+    "description": "Get the exact Python version in the Python 3.10 distribution",
+    "syntax": "",
+    "args": [],
+    "default_timeout": 90,
+    "shell": "python",
+    "supported_platforms": [
+      "linux",
+      "darwin",
+      "windows"
+    ],
+    "category": "TRMM (All):3rd Party Software"
+  },
+  {
+    "guid": "a268ac1b-6193-4a96-a7fc-711674e157ad",
+    "filename": "scripts/user-explorer-bookmarks.ps1",
+    "submittedBy": "https://github.com/NiceGuyIT",
+    "name": "👤 Explorer Bookmarks",
+    "description": "Bookmark your File Explorer windows",
+    "syntax": "[ task | integrate | <file> ]\n[ EB_BOOKMARKS_DIR=<string> ]\n[ EB_MAX_NUM_FILES=<int> ]\n[ EB_FILENAME_PREFIX=<string> ]\n[ EB_RESTORE_MAX_FILE_SIZE=<int> ]\n[ EB_RESTORE_MAX_WINDOWS=<int> ]\n[ EB_RESTORE_DELAY_SECONDS=<int> ]",
+    "args": [],
+    "default_timeout": 90,
+    "shell": "powershell",
+    "supported_platforms": [
+      "windows"
+    ],
+    "category": "TRMM (Win):Other"
+  },
+  {
+    "guid": "d78b0dc1-b4ff-405b-a8fd-5b0c54398ed9",
+    "filename": "scripts/all-task-runner.py",
+    "submittedBy": "https://github.com/NiceGuyIT",
+    "name": "🖥️ Software - Task Runner",
+    "description": "General purpose task runner",
+    "syntax": "RUNNER_TASK_NAME=<string>\n[ RUNNER_TASK_ARGS=<string> ]\n[ RUNNER_BIN_DIR=<string> ]\n[ RUNNER_LOG_LEVEL=<string> ]",
+    "args": [],
+    "default_timeout": 15,
+    "shell": "python",
+    "supported_platforms": [],
+    "category": "TRMM (All):3rd Party Software"
+  }
+]

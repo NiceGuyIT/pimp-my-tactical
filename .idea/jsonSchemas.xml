@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JsonSchemaMappingsProjectConfiguration">
+    <state>
+      <map>
+        <entry key="TRMM Community Scripts">
+          <value>
+            <SchemaInfo>
+              <option name="generatedName" value="New Schema" />
+              <option name="name" value="TRMM Community Scripts" />
+              <option name="relativePathToSchema" value="https://raw.githubusercontent.com/amidaware/community-scripts/main/community_scripts.schema.json" />
+              <option name="schemaVersion" value="JSON Schema version 7" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="path" value="scripts/scripts.json" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
+      </map>
+    </state>
+  </component>
+</project>
