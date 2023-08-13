@@ -121,11 +121,11 @@ def exec_script(binary: str, script: str) -> str:
         ]
     elif binary == 'deno':
         command = [
-            bin_file, '-c', script
+            bin_file, 'run', script
         ]
     elif binary == 'nushell':
         command = [
-            bin_file, '-c', script
+            bin_file, script
         ]
     else:
         logger.error(f'Unknown binary "{binary}"')

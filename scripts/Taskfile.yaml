@@ -14,9 +14,13 @@ tasks:
       EXEC_LOG_LEVEL: debug
       EXEC_BIN_DIR:
         sh: |
-          echo ${HOME}/projects/niceguyit/pimp-my-tactical/scripts/scripts/tmp
-      EXEC_BINARY: rustpython
-      EXEC_SCRIPT_URL: https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/main/scripts/wrapper/hello-world.py
+          echo ${HOME}/projects/niceguyit/pimp-my-tactical/scripts/tmp
+      EXEC_BINARY: deno
+      EXEC_SCRIPT_URL: https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/main/scripts/wrapper/hello-world.ts
     cmds:
       - cmd: |
+          export EXEC_LOG_LEVEL='{{.EXEC_LOG_LEVEL}}'
+          export EXEC_BIN_DIR='{{.EXEC_BIN_DIR}}'
+          export EXEC_BINARY='{{.EXEC_BINARY}}'
+          export EXEC_SCRIPT_URL='{{.EXEC_SCRIPT_URL}}'
           python3 scripts/all-exec-wrapper.py
