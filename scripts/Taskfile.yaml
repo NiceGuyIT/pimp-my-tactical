@@ -1,0 +1,22 @@
+---
+version: "3"
+
+tasks:
+
+  list:
+    desc: List available tasks
+    cmds:
+      - cmd: 'task --list'
+
+  test-exec-wrapper:
+    desc: Test the exec wrapper
+    vars:
+      EXEC_LOG_LEVEL: debug
+      EXEC_BIN_DIR:
+        sh: |
+          echo ${HOME}/projects/niceguyit/pimp-my-tactical/scripts/scripts/tmp
+      EXEC_BINARY: rustpython
+      EXEC_SCRIPT_URL: https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/main/scripts/wrapper/hello-world.py
+    cmds:
+      - cmd: |
+          python3 scripts/all-exec-wrapper.py

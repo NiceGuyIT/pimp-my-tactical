@@ -23,6 +23,8 @@ Environmental variables
 import logging
 import os
 import platform
+import traceback
+
 import requests
 import subprocess
 import tempfile
@@ -39,33 +41,41 @@ Note: The initial value is the system tmp directory. It's assigned a random dire
 tmp_dir: str | None = None
 
 """
+tmp_file is global because it references a randomly generated directory.
+Note: The initial value is the system tmp directory. It's assigned a random file in set_tmp_file().
+"""
+tmp_file: str | None = None
+
+"""
 bin_dir is the directory that holds the binaries.
 """
 bin_dir: str | None = None
+
+"""
+bin_file is the full path to the binary.
+"""
+bin_file: str | None = None
 
 
 def download_binary(binary: str) -> None:
     """
     Download the binary and copy it to bin_dir.
     """
-    global tmp_dir, bin_dir, logger
+    global bin_dir, bin_file, logger
 
     url = get_download_url(binary)
     if url is None:
         return None
 
-    exe_ext = get_exe_ext()
-    filename = os.path.join(bin_dir, f'{binary}{exe_ext}')
-
     try:
-        logger.debug(f'Downloading binary from URL "{url}" to file "{filename}"')
+        logger.debug(f'Downloading binary from URL "{url}" to file "{bin_file}"')
         response = requests.get(url, stream=True)
         logger.debug(f'Status code: {response.status_code}')
-        file = open(filename, 'wb')
+        file = open(bin_file, 'wb')
         file.write(response.content)
         file.close()
         response.close()
-        os.chmod(filename, 0o755)
+        os.chmod(bin_file, 0o755)
     except:
         logger.error(f'Failed to download binary from URL "{url}"')
         raise
@@ -73,23 +83,19 @@ def download_binary(binary: str) -> None:
 
 def download_script(url: str) -> str:
     """
-    Download the script to tmp_dir.
+    Download the script to tmp_file.
     """
-    global tmp_dir, bin_dir, logger
-
-    # exe_ext = get_exe_ext()
-    # filename = os.path.join(tmp_dir, tempfile.TemporaryFile())
-    filename = tmp_dir
+    global tmp_file, bin_dir, logger
 
     try:
-        logger.debug(f'Downloading script from URL "{url}" to file "{filename}"')
+        logger.debug(f'Downloading script from URL "{url}" to file "{tmp_file}"')
         response = requests.get(url, stream=True)
         logger.debug(f'Status code: {response.status_code}')
-        file = open(filename, 'wb')
+        file = open(tmp_file, 'wb')
         file.write(response.content)
         file.close()
         response.close()
-        return filename
+        return tmp_file
     except:
         logger.error(f'Failed to download binary from URL "{url}"')
         raise
@@ -105,18 +111,21 @@ def exec_script(binary: str, script: str) -> str:
     :return: Script output.
     :rtype: str
     """
+    global bin_file, logger
     # Run the script as a parameter to the binary.
+    # Note: binary is used to determine which binary to execute while bin_file is the full path to the binary that was
+    # determined earlier.
     if binary == 'rustpython':
         command = [
-            binary, '-c', script
+            bin_file, script
         ]
     elif binary == 'deno':
         command = [
-            binary, '-c', script
+            bin_file, '-c', script
         ]
     elif binary == 'nushell':
         command = [
-            binary, '-c', script
+            bin_file, '-c', script
         ]
     else:
         logger.error(f'Unknown binary "{binary}"')
@@ -130,7 +139,7 @@ def exec_script(binary: str, script: str) -> str:
         return output
     except subprocess.CalledProcessError as err2:
         logger.error(f'Failed to exec: {command}')
-        # logger.error(traceback.format_exc())
+        logger.error(traceback.format_exc())
         logger.error(err2)
         raise
 
@@ -220,8 +229,8 @@ def get_os_name() -> str:
 def set_bin_dir() -> None:
     """
     set_bin_dir will set the bin directory (BIN_DIR). The env variable EXEC_BIN_DIR will be used if defined.
-    :return: The full path to the bin directory is returned.
-    :rtype: str
+    :return: Nothing is returned.
+    :rtype: None
     """
     global bin_dir, tmp_dir
     bin_dir = ''
@@ -242,6 +251,18 @@ def set_bin_dir() -> None:
             bin_dir = os.path.normpath(tmp_dir)
 
 
+def set_bin_file(binary: str) -> None:
+    """
+    set_bin_file will set the full path to the binary.
+    :return: The full path to the binary is returned.
+    :rtype: str
+    """
+    global bin_dir, bin_file
+    exe_ext = get_exe_ext()
+    bin_file = os.path.join(bin_dir, f'{binary}{exe_ext}')
+    logger.debug(f'bin_file: "{bin_file}"')
+
+
 def set_tmp_dir(cleanup: bool = True):
     """
     set_tmp_dir will set the temporary directory used to store downloaded files.
@@ -253,11 +274,29 @@ def set_tmp_dir(cleanup: bool = True):
         # tmp_dir has not been assigned yet.
         if cleanup:
             # TemporaryDirectory() will delete the directory afterward. This is used for production.
-            # tmp_dir = tempfile.TemporaryDirectory().name
-            tmp_dir = tempfile.TemporaryFile().name
+            tmp_dir = tempfile.TemporaryDirectory().name
         else:
             # mkdtemp() does not delete the directory. This is used for testing purposes.
             tmp_dir = tempfile.mkdtemp()
+
+
+def set_tmp_file(cleanup: bool = True):
+    """
+    set_tmp_file will set the temporary file used to store the script.
+    :param cleanup: Should the tmp directory be automatically cleaned up?
+    :type cleanup: bool
+    """
+    global tmp_file
+    if tmp_file is None:
+        # tmp_file has not been assigned yet.
+        if cleanup:
+            # TemporaryFile() will delete the file afterward. This is used for production.
+            tmp_file = tempfile.TemporaryFile().name
+        else:
+            # mkstemp() does not delete the file. This is used for testing purposes.
+            #   mkstemp() returns a tuple containing an OS-level handle to an open file (as would be returned by
+            #   os.open()) and the absolute pathname of that file, in that order.
+            (_, tmp_file) = tempfile.mkstemp()
 
 
 def get_logger() -> logging.Logger:
@@ -323,11 +362,11 @@ def main():
     """
     The main function is to download the binary and script, and then run the binary passing the script as an argument.
     """
-    global bin_dir, tmp_dir, logger
+    global bin_dir, bin_file, tmp_dir, tmp_file, logger
 
-    set_tmp_dir(False)
+    set_tmp_file(False)
     set_bin_dir()
-    logger.debug(f'tmp_dir: {tmp_dir}')
+    logger.debug(f'tmp_file: {tmp_file}')
     logger.debug(f'bin_dir: {bin_dir}')
 
     if not os.path.isdir(bin_dir):
@@ -340,6 +379,9 @@ def main():
     else:
         logger.error('EXEC_BINARY environment variable is not defined')
         raise ValueError('EXEC_BINARY environment variable is not defined')
+
+    set_bin_file(binary)
+    logger.debug(f'bin_file: {bin_file}')
 
     try:
         # Download the binary
@@ -365,10 +407,10 @@ def main():
         raise ValueError(f'Failed to download the script from URL "{script_url}"')
 
     try:
-        exec_script(binary, script)
+        exec_script(binary, tmp_file)
     except:
-        logger.error(f'Failed to run the script "{script_url}" with the binary "{binary}"')
-        raise ValueError(f'Failed to run the script "{script_url}" with the binary "{binary}"')
+        logger.error(f'Failed to run the script "{tmp_file}" with the binary "{bin_file}"')
+        raise ValueError(f'Failed to run the script "{tmp_file}" with the binary "{bin_file}"')
 
     # Move out of the temporary directory, so we don't prevent it from being deleted.
     os.chdir(bin_dir)
