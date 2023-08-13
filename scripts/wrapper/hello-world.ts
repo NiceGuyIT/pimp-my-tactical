@@ -1,11 +1,11 @@
 /**
  * hello-world.ts
  */
-function capitalize(word) {
+function capitalize(word: string): string {
 	return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
-function hello(name) {
+function hello(name: string): string {
 	return "Hello " + capitalize(name);
 }
 

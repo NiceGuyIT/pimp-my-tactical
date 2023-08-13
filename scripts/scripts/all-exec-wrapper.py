@@ -32,29 +32,34 @@ import tempfile
 """
 logger is the global logging instance set by get_logger().
 """
-logger: logging.Logger | None = None
+# logger: logging.Logger | None = None
+logger: logging.Logger = None
 
 """
 tmp_dir is global because it references a randomly generated directory.
 Note: The initial value is the system tmp directory. It's assigned a random directory in set_tmp_dir().
 """
-tmp_dir: str | None = None
+# tmp_dir: str | None = None
+tmp_dir: str = None
 
 """
 tmp_file is global because it references a randomly generated directory.
 Note: The initial value is the system tmp directory. It's assigned a random file in set_tmp_file().
 """
-tmp_file: str | None = None
+# tmp_file: str | None = None
+tmp_file: str = None
 
 """
 bin_dir is the directory that holds the binaries.
 """
-bin_dir: str | None = None
+# bin_dir: str | None = None
+bin_dir: str = None
 
 """
 bin_file is the full path to the binary.
 """
-bin_file: str | None = None
+# bin_file: str | None = None
+bin_file: str = None
 
 
 def download_binary(binary: str) -> None:
@@ -342,7 +347,7 @@ def get_download_url(binary: str) -> str:
             },
         },
         'windows': {
-            'x86_64': {
+            'amd64': {
                 'deno': 'https://github.com/NiceGuyIT/binaries/raw/main/deno/deno-x86_64-pc-windows-msvc.exe',
                 'nushell': 'https://github.com/NiceGuyIT/binaries/raw/main/nushell/nu-x86_64-pc-windows-msvc.exe',
                 'rustpython': 'https://github.com/NiceGuyIT/binaries/raw/main/rustpython/rustpython-x86_64-pc-windows-gnu.exe',
