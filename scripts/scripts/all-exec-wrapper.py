@@ -50,6 +50,12 @@ Note: The initial value is the system tmp directory. It's assigned a random file
 tmp_file: str = None
 
 """
+binary is the binary name.
+"""
+# binary: str | None = None
+binary: str = None
+
+"""
 bin_dir is the directory that holds the binaries.
 """
 # bin_dir: str | None = None
@@ -291,17 +297,25 @@ def set_tmp_file(cleanup: bool = True):
     :param cleanup: Should the tmp directory be automatically cleaned up?
     :type cleanup: bool
     """
-    global tmp_file
+    global tmp_file, binary
+    suffix = ''
+    if binary == 'rustpython':
+        suffix = '.py'
+    elif binary == 'deno':
+        suffix = '.ts'
+    elif binary == 'nushell':
+        suffix = '.nu'
+
     if tmp_file is None:
         # tmp_file has not been assigned yet.
         if cleanup:
             # TemporaryFile() will delete the file afterward. This is used for production.
-            tmp_file = tempfile.TemporaryFile().name
+            tmp_file = tempfile.TemporaryFile(suffix = suffix).name
         else:
             # mkstemp() does not delete the file. This is used for testing purposes.
             #   mkstemp() returns a tuple containing an OS-level handle to an open file (as would be returned by
             #   os.open()) and the absolute pathname of that file, in that order.
-            (_, tmp_file) = tempfile.mkstemp()
+            (_, tmp_file) = tempfile.mkstemp(suffix = suffix)
 
 
 def get_logger() -> logging.Logger:
@@ -367,7 +381,13 @@ def main():
     """
     The main function is to download the binary and script, and then run the binary passing the script as an argument.
     """
-    global bin_dir, bin_file, tmp_dir, tmp_file, logger
+    global bin_dir, bin_file, binary, tmp_dir, tmp_file, logger
+
+    if "EXEC_BINARY" in os.environ:
+        binary = os.getenv('EXEC_BINARY')
+    else:
+        logger.error('EXEC_BINARY environment variable is not defined')
+        raise ValueError('EXEC_BINARY environment variable is not defined')
 
     set_tmp_file(False)
     set_bin_dir()
@@ -377,13 +397,6 @@ def main():
     if not os.path.isdir(bin_dir):
         # Create bin_dir and all parent directories
         os.makedirs(bin_dir)
-
-    binary = None
-    if "EXEC_BINARY" in os.environ:
-        binary = os.getenv('EXEC_BINARY')
-    else:
-        logger.error('EXEC_BINARY environment variable is not defined')
-        raise ValueError('EXEC_BINARY environment variable is not defined')
 
     set_bin_file(binary)
     logger.debug(f'bin_file: {bin_file}')
