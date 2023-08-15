@@ -356,7 +356,7 @@ def get_download_url(binary: str) -> str:
             }
         },
         'darwin': {
-            'aarm64': {
+            'arm64': {
                 'deno': 'deno-aarch64-apple-darwin',
                 'nushell': 'nu-aarch64-apple-darwin',
                 'rustpython': 'rustpython-aarch64-apple-darwin',
