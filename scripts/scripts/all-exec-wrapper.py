@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.10
+#!/usr/bin/env /opt/exec-wrapper/bin/rustpython
 # Copyright 2023, Nice Guy IT, LLC. All rights reserved.
 # SPDX-License-Identifier: MIT
 # Source: https://github.com/NiceGuyIT/pimp-my-tactical
@@ -13,7 +13,8 @@ the binaries.
 The requests module is not a base module and required.
 
 Environmental variables
-- EXEC_PROGRAM is the program to run.
+- EXEC_BINARY is the program to run.
+- EXEC_SCRIPT_URL is the script to run. This is expected to be the raw URL, not an HTML url.
 - EXEC_LOG_LEVEL sets the log level.
 - EXEC_BIN_DIR is the directory to save the binaries.
   Default:
@@ -345,33 +346,34 @@ def get_download_url(binary: str) -> str:
     global logger
     os_name = get_os_name()
     arch_name = get_arch_name()
+    base_url = 'https://niceguyit.biz/exec-wrapper/'
     url_map = {
         'linux': {
             'x86_64': {
-                'deno': 'https://github.com/NiceGuyIT/binaries/raw/main/deno/deno-x86_64-unknown-linux-gnu',
-                'nushell': 'https://github.com/NiceGuyIT/binaries/raw/main/nushell/nu-x86_64-unknown-linux-musl',
-                'rustpython': 'https://github.com/NiceGuyIT/binaries/raw/main/rustpython/rustpython-x86_64-unknown-linux-gnu',
+                'deno': 'deno-x86_64-unknown-linux-gnu',
+                'nushell': 'nu-x86_64-unknown-linux-musl',
+                'rustpython': 'rustpython-x86_64-unknown-linux-gnu',
             }
         },
         'darwin': {
             'aarm64': {
-                'deno': 'https://github.com/NiceGuyIT/binaries/raw/main/deno/deno-aarch64-apple-darwin',
-                'nushell': 'https://github.com/NiceGuyIT/binaries/raw/main/nushell/nu-aarch64-apple-darwin',
-                'rustpython': 'https://github.com/NiceGuyIT/binaries/raw/main/rustpython/rustpython-aarch64-apple-darwin',
+                'deno': 'deno-aarch64-apple-darwin',
+                'nushell': 'nu-aarch64-apple-darwin',
+                'rustpython': 'rustpython-aarch64-apple-darwin',
             },
         },
         'windows': {
             'amd64': {
-                'deno': 'https://github.com/NiceGuyIT/binaries/raw/main/deno/deno-x86_64-pc-windows-msvc.exe',
-                'nushell': 'https://github.com/NiceGuyIT/binaries/raw/main/nushell/nu-x86_64-pc-windows-msvc.exe',
-                'rustpython': 'https://github.com/NiceGuyIT/binaries/raw/main/rustpython/rustpython-x86_64-pc-windows-gnu.exe',
+                'deno': 'deno-x86_64-pc-windows-msvc.exe',
+                'nushell': 'nu-x86_64-pc-windows-msvc.exe',
+                'rustpython': 'rustpython-x86_64-pc-windows-gnu.exe',
             }
         },
     }
     if os_name in url_map and arch_name in url_map[os_name] and binary in url_map[os_name][arch_name]:
-        bin_url = url_map[os_name][arch_name][binary]
+        bin_url = f'{base_url}{url_map[os_name][arch_name][binary]}'
         logger.debug(f'get_download_url: URL: {bin_url}')
-        return url_map[os_name][arch_name][binary]
+        return bin_url
     else:
         logger.error(f'Unsupported OS "{os_name}" or architecture "{arch_name}"')
         raise ValueError(f'Unsupported OS "{os_name}" or architecture "{arch_name}"')
