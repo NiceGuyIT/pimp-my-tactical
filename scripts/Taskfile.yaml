@@ -64,3 +64,15 @@ tasks:
           export EXEC_BINARY='{{.EXEC_BINARY}}'
           export EXEC_SCRIPT_URL='{{.EXEC_SCRIPT_URL}}'
           {{.RUST_PYTHON}} scripts/all-exec-wrapper.py
+
+  dev-explorer-bookmarks:
+    desc: Develop the Explorer Bookmarks script
+    cmds:
+      - cmd: |
+          cd {{ quote .USER_WORKING_DIR }}
+          deno run \
+            --allow-read \
+            --allow-run \
+            --allow-sys \
+            --allow-env \
+            explorer-bookmarks.ts
