@@ -55,13 +55,13 @@ if ((MaxNumFiles < 1) || (MaxNumFiles > 1000)) {
 
 /**
  * EB_RESTORE_MAX_FILE_SIZE is the maximum file size to restore
- * Default: 10k
+ * Default: 1024 bytes (1KB)
  */
-let RestoreMaxFileSize = Number(Deno.env.get("EB_RESTORE_MAX_FILE_SIZE") ?? 10 * 1024);
-if ((RestoreMaxFileSize < 1) || (RestoreMaxFileSize > 1000)) {
-	console.warn(`EB_RESTORE_MAX_FILE_SIZE: is not a number between 1 and 1000 inclusive: '${RestoreMaxFileSize}'`);
-	console.warn(`EB_RESTORE_MAX_FILE_SIZE: Using default of 10K`);
-	RestoreMaxFileSize = 10 * 1024;
+let RestoreMaxFileSize = Number(Deno.env.get("EB_RESTORE_MAX_FILE_SIZE") ?? 1024);
+if ((RestoreMaxFileSize < 1) || (RestoreMaxFileSize > 4096)) {
+	console.warn(`EB_RESTORE_MAX_FILE_SIZE: is not a number between 1 and 4KB (4096 bytes) inclusive: '${RestoreMaxFileSize}'`);
+	console.warn(`EB_RESTORE_MAX_FILE_SIZE: Using default of 1KB`);
+	RestoreMaxFileSize = 1024;
 }
 
 /**
@@ -83,8 +83,8 @@ if ((RestoreMaxWindows < 1) || (RestoreMaxWindows > 250)) {
  * Hard limit: 30
  */
 let RestoreDelaySeconds = Number(Deno.env.get("EB_RESTORE_DELAY_SECONDS") ?? 0.5);
-if ((RestoreDelaySeconds < 1) || (RestoreDelaySeconds > 30)) {
-	console.warn(`EB_RESTORE_DELAY_SECONDS: is not a number between 1 and 30 inclusive: '${RestoreDelaySeconds}'`);
+if ((RestoreDelaySeconds < 0) || (RestoreDelaySeconds > 30)) {
+	console.warn(`EB_RESTORE_DELAY_SECONDS: is not a number between 0 and 30 inclusive: '${RestoreDelaySeconds}'`);
 	console.warn(`EB_RESTORE_DELAY_SECONDS: Using default of 0.5`);
 	RestoreDelaySeconds = 0.5;
 }
@@ -391,7 +391,7 @@ function instanceOfIExecResponse(obj: any): obj is IExecResponse {
  * @constructor
  */
 function TestIsAdmin() {
-	if (Deno.build.os === 'windows') {
+	if (Deno.build.os === "windows") {
 		const cmd = `C:/Windows/System32/whoami.exe /groups`;
 		exec(cmd, {output: OutputMode.Capture})
 			.catch(err => {
@@ -430,47 +430,72 @@ function TestIsAdmin() {
 	return false;
 }
 
+/**
+ * TestIsInterativeShell will return true if the program is being run interactively.
+ * For Linux/macOS:
+ *   This checks if stdin is a terminal.
+ * For Windows:
+ *   This checks if PowerShell was run with the -NonInteractive switch.
+ *   @See https://stackoverflow.com/questions/9738535/powershell-test-for-noninteractive-mode
+ * @constructor
+ */
 function TestIsInteractiveShell() {
-	// https://stackoverflow.com/questions/9738535/powershell-test-for-noninteractive-mode
-	// Test each Arg for match of abbreviated '-NonInteractive' command.
-	/*
-		$NonInteractive = [Environment]::GetCommandLineArgs() | Where-Object{ $_ -like '-NonI*' }
-
-		if ([Environment]::UserInteractive -and -not$NonInteractive) {
-		// We are in an interactive shell.
-				return $true
+	if (Deno.build.os === "windows") {
+		// Test each Arg for match of abbreviated '-NonInteractive' command.
+		/*
+		$NonInteractive = [Environment]::GetCommandLineArgs() | Where - Object
+		{
+			$_ - like
+			'-NonI*'
 		}
-		return $false
-	*/
+
+		if ([Environment]::UserInteractive - and - not$NonInteractive) {
+			// We are in an interactive shell.
+			return $true
+		}
+		*/
+		return false;
+	} else {
+		return Deno.isatty(Deno.stdin.rid);
+	}
 }
 
+/**
+ * GetHelp will print the help message.
+ * @constructor
+ */
 function GetHelp() {
-	console.log(`explorer-bookmarks.ps1`);
-	console.log(`    Bookmark the Windows Explorer paths in a file.`);
-	console.log(``);
-	console.log(`explorer-bookmarks.ps1 <file>`);
-	console.log(`    Load the bookmarks from a file. This is usually done from a right-click menu.`);
-	console.log(``);
-	console.log(`explorer-bookmarks.ps1 task`);
-	console.log(`    This command is run from the scheduled task to restore the last bookmarks saved.`);
-	console.log(``);
-	console.log(`explorer-bookmarks.ps1 <install | uninstall | reinstall>`);
-	console.log(`    Install/uninstall/reinstall the integration: Script, right click menu and scheduled task.`);
-	console.log(``);
-	console.log(`Environmental variables:`);
-	console.log(``);
-	console.log(`    EB_BOOKMARKS_DIR - Directory to save the explorer bookmark files.`);
-	console.log(`    EB_MAX_NUM_FILES - Maximum number of bookmark files to save.`);
-	console.log(`    EB_FILENAME_PREFIX - Filename prefix to use for the bookmark files.`);
-	console.log(`    EB_RESTORE_MAX_FILE_SIZE - Maximum file size to restore.`);
-	console.log(`    EB_RESTORE_MAX_WINDOWS - Maximum number of windows to restore.`);
-	console.log(`      Note: This counts the lines in the file, not actual windows.`);
-	console.log(`    EB_RESTORE_DELAY_SECONDS - Delay in seconds between opening each window.`);
-	console.log(`    EB_SCRIPT_PATH - Where to install this script for the integration.`);
-	console.log(`    EB_LOG_LEVEL - Set the log level of the script.`);
-	console.log(``);
+	console.log(`explorer-bookmarks.ps1
+	Bookmark the Windows Explorer paths in a file.
+
+explorer-bookmarks.ps1 <file>
+	Load the bookmarks from a file. This is usually done from a right-click menu.
+
+explorer-bookmarks.ps1 task
+	This command is run from the scheduled task to restore the last bookmarks saved.
+
+explorer-bookmarks.ps1 <install | uninstall | reinstall>
+	Install/uninstall/reinstall the integration: Script, right click menu and scheduled task.
+
+Environmental variables:
+
+	EB_BOOKMARKS_DIR - Directory to save the explorer bookmark files.
+	EB_MAX_NUM_FILES - Maximum number of bookmark files to save.
+	EB_FILENAME_PREFIX - Filename prefix to use for the bookmark files.
+	EB_RESTORE_MAX_FILE_SIZE - Maximum file size to restore.
+	EB_RESTORE_MAX_WINDOWS - Maximum number of windows to restore.
+	  Note: This counts the lines in the file, not actual windows.
+	EB_RESTORE_DELAY_SECONDS - Delay in seconds between opening each window.
+	EB_SCRIPT_PATH - Where to install this script for the integration.
+	EB_LOG_LEVEL - Set the log level of the script.
+
+	`);
 }
 
 if (TestIsAdmin()) {
 	console.log(`IsAdmin: True`);
+}
+
+if (TestIsInteractiveShell()) {
+	console.log(`IsInteractiveShell: True`);
 }
