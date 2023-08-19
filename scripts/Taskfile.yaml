@@ -68,9 +68,23 @@ tasks:
   dev-explorer-bookmarks:
     desc: Develop the Explorer Bookmarks script
     cmds:
+      # .USER_WORKING_DIR returns the Windows path which does not work in MSYS.
+      - cmd: |
+          [[ ! -d "wrapper" ]] && echo "This needs to be run in the wrapper directory"
+          deno run \
+            --allow-read \
+            --allow-run \
+            --allow-sys \
+            --allow-env \
+            wrapper/explorer-bookmarks.ts
+
+  watch-explorer-bookmarks:
+    desc: Develop the Explorer Bookmarks script using deno watch mode
+    cmds:
       - cmd: |
           cd {{ quote .USER_WORKING_DIR }}
           deno run \
+            --watch \
             --allow-read \
             --allow-run \
             --allow-sys \

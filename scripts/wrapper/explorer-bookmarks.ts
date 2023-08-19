@@ -1,10 +1,10 @@
-import { readLines } from "https://deno.land/std@0.198.0/io/read_lines.ts";
+// import { readLines } from "https://deno.land/std@0.198.0/io/read_lines.ts";
 import { exists, ensureDirSync } from "https://deno.land/std@0.198.0/fs/mod.ts";
 import { join } from "https://deno.land/std@0.198.0/path/mod.ts";
 import { format } from "https://deno.land/std@0.198.0/datetime/mod.ts";
-import { exec, IExecResponse, OutputMode } from "https://deno.land/x/exec@0.0.5/mod.ts";
 import * as log from "https://deno.land/std@0.198.0/log/mod.ts";
 
+/*
 const bookmarks = "test-file.txt";
 const fileReader = await Deno.open(bookmarks);
 
@@ -17,6 +17,7 @@ for await (const line of readLines(fileReader)) {
 		console.log("Opening directory", line);
 	}
 }
+*/
 
 
 /**
@@ -42,7 +43,7 @@ const FilenamePattern = `${FilenamePrefix}-*.txt`;
 const BookmarkFilename = `${FilenamePrefix}-${format(new Date(), "yyyyMMdd-HHmmss")}.txt`;
 
 /**
- * ENV:EB_MAX_NUM_FILES is the maximum number of bookmark files to save
+ * EB_MAX_NUM_FILES is the maximum number of bookmark files to save
  * Default: 20
  * Hard limit: 1000
  */
@@ -90,7 +91,7 @@ if ((RestoreDelaySeconds < 0) || (RestoreDelaySeconds > 30)) {
 }
 
 /**
- * ENV:EB_SCRIPT_PATH is the path to the script to install. This script will be copied to this path.
+ * EB_SCRIPT_PATH is the path to the script to install. This script will be copied to this path.
  * Default: TacticalRMM directory, "C:\ProgramData\TacticalRMM\Explorer-Bookmarks.ps1"
  */
 const ScriptPath = Deno.env.get("EB_SCRIPT_PATH") ?? `C:/ProgramData/TacticalRMM/Explorer-Bookmarks.ps1`;
@@ -139,7 +140,6 @@ log.setup({
  * @constructor
  */
 function NewExplorerDir(dir: string) {
-	dir = BookmarksDir;
 	if (!exists(dir, {
 		isDirectory: true,
 		isReadable: true,
@@ -378,10 +378,13 @@ function OpenExplorerBookmarks(File: string) {
  * Helper function to test if exec() response is an instance of IExecResponse.
  * @param obj Object to test.
  */
+
+/*
 // deno-lint-ignore no-explicit-any
 function instanceOfIExecResponse(obj: any): obj is IExecResponse {
 	return ("status" in obj) && ("output" in obj);
 }
+*/
 
 /**
  * TestIsAdmin will return true if the current user is an administrator.
@@ -390,44 +393,39 @@ function instanceOfIExecResponse(obj: any): obj is IExecResponse {
  *   "Mandatory Label\System Mandatory Level" is when the script is run from SYSTEM.
  * @constructor
  */
-function TestIsAdmin() {
+async function TestIsAdmin() {
+	let cmd = "";
+	let args: string[] = [];
 	if (Deno.build.os === "windows") {
-		const cmd = `C:/Windows/System32/whoami.exe /groups`;
-		exec(cmd, {output: OutputMode.Capture})
-			.catch(err => {
-				console.error(`Error executing command '${cmd}':`, err);
-				throw err;
-			})
-			.then(response => {
-				if (instanceOfIExecResponse(response)) {
-					console.debug(`whoAmI output: '${response.output}'`);
-					console.debug(`whoAmI status: '${response.status.success}'`);
-					console.debug(`whoAmI response:`, response);
-					if (response.output.includes("Mandatory Label\\High Mandatory Level") ||
-						response.output.includes("Mandatory Label\\System Mandatory Level")) {
-						return true;
-					}
-				}
-			});
+		cmd = "C:/Windows/System32/whoami.exe";
+		args = [
+			"/groups",
+		];
 	} else {
-		const cmd = `/usr/bin/whoami`;
-		exec(cmd, {output: OutputMode.Capture})
-			.catch(err => {
-				console.error(`Error executing command '${cmd}':`, err);
-				throw err;
-			})
-			.then(response => {
-				if (instanceOfIExecResponse(response)) {
-					console.debug(`whoAmI output: '${response.output}'`);
-					console.debug(`whoAmI status: '${response.status.success}'`);
-					console.debug(`whoAmI response:`, response);
-					if (response.output.includes("root")) {
-						return true;
-					}
-				}
-			});
+		cmd = "/usr/bin/whoami";
 	}
-	return false;
+
+	const command = new Deno.Command(cmd, {
+		args: args,
+	});
+	const {code, stdout, stderr} = await command.output();
+
+	// Capture any errors
+	if (code !== 0) {
+		console.error(`Error executing command '${cmd}': return code: ${code}`);
+		const stderrText = new TextDecoder().decode(stderr);
+		console.error(`stderr:\n`, stderrText);
+		throw stderrText;
+	}
+
+	// Process the output
+	const stdoutText = new TextDecoder().decode(stdout);
+	if (Deno.build.os === "windows") {
+		return (stdoutText.includes("Mandatory Label\\High Mandatory Level") ||
+			stdoutText.includes("Mandatory Label\\System Mandatory Level"));
+	} else {
+		return (stdoutText.includes("root"));
+	}
 }
 
 /**
@@ -440,24 +438,48 @@ function TestIsAdmin() {
  * @constructor
  */
 function TestIsInteractiveShell() {
-	if (Deno.build.os === "windows") {
-		// Test each Arg for match of abbreviated '-NonInteractive' command.
-		/*
-		$NonInteractive = [Environment]::GetCommandLineArgs() | Where - Object
-		{
-			$_ - like
-			'-NonI*'
-		}
+	/*
+		if (Deno.build.os === "windows") {
+			// https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_powershell_exe?view=powershell-5.1&viewFallbackFrom=powershell-7.2
+			const cmd = "powershell.exe";
+			const args = [
+				"-NonInteractive",
+				"-NoProfile",
+				"-NoLogo",
+				"-InputFormat",
+				"text",
+				"-OutputFormat",
+				"text",
+				"-Command",
+				"Get-ChildItem | Where { $_ -Like 'hello*' }"
+			];
+			// define command used to create the subprocess
+			const command = new Deno.Command(cmd, {
+				args: args,
+				stdout: "piped",
+				stderr: "piped",
+			});
 
-		if ([Environment]::UserInteractive - and - not$NonInteractive) {
-			// We are in an interactive shell.
-			return $true
+			// create subprocess and collect output
+			const { code, stdout, stderr } = await command.output();
+
+			// Capture any errors
+			if (code !== 0) {
+				console.error(`Error executing command '${cmd}': return code: ${code}`);
+				const stderrText = new TextDecoder().decode(stderr);
+				console.error(`stderr:\n`, stderrText);
+				throw stderrText;
+			}
+
+			// Process the output
+			const stdoutText = new TextDecoder().decode(stdout);
+			console.log(`stdoutText:\n`, stdoutText);
 		}
-		*/
-		return false;
-	} else {
-		return Deno.isatty(Deno.stdin.rid);
-	}
+	*/
+
+	console.debug(`isATTY STDIN:`, Deno.isatty(Deno.stdin.rid));
+	console.debug(`isATTY STDOUT:`, Deno.isatty(Deno.stdout.rid));
+	return Deno.isatty(Deno.stdin.rid);
 }
 
 /**
@@ -492,10 +514,96 @@ Environmental variables:
 	`);
 }
 
-if (TestIsAdmin()) {
-	console.log(`IsAdmin: True`);
+const isAdmin = await TestIsAdmin();
+const isInteractiveShell = TestIsInteractiveShell();
+let returnCode = 0;
+
+switch (Deno.args.length) {
+	case 0: {
+		if (isAdmin) {
+			console.warn(`This script should not be run as an administrator.`);
+			returnCode = 1;
+			break;
+		}
+
+		// Zero args: Save the windows
+		// User configuration
+		NewExplorerDir(BookmarksDir);
+		SaveExplorerBookmarks();
+		StartCleanup();
+	}
+		break;
+
+	case 1: {
+		switch (Deno.args[0].toLowerCase()) {
+			case "-h":
+			case "--help":
+				GetHelp();
+				break;
+
+			case "task": {
+				// Scheduled task to open the bookmarks in the last saved file.
+
+			}
+				break;
+
+			case "install": {
+				if (isAdmin) {
+					InstallScript();
+					AddIntegration();
+					AddScheduledTask();
+				} else {
+					console.error(`Failed to install the integration. Administrator permission is required.`);
+					returnCode = 1;
+				}
+			}
+				break;
+
+			case "uninstall": {
+				if (isAdmin) {
+					UninstallScript();
+					RemoveIntegration();
+					RemoveScheduledTask();
+				} else {
+					console.error(`Failed to uninstall the integration. Administrator permission is required.`);
+					returnCode = 1;
+				}
+			}
+				break;
+
+			case "reinstall": {
+				if (isAdmin) {
+					// Uninstall
+					UninstallScript();
+					RemoveIntegration();
+					RemoveScheduledTask();
+					console.info();
+
+					// Install
+					InstallScript();
+					AddIntegration();
+					AddScheduledTask();
+				} else {
+					console.error(`Failed to reinstall the integration. Administrator permission is required.`);
+					returnCode = 1;
+				}
+			}
+				break;
+
+			default: {
+				OpenExplorerBookmarks(Deno.args[0])
+				// FIXME: Should this sleep?
+			}
+			break;
+		}
+	}
+		break;
+
+	default: {
+		console.error(`Wrong number of arguments: '${Deno.args.length}'`);
+		GetHelp();
+		returnCode = 1;
+	}
 }
 
-if (TestIsInteractiveShell()) {
-	console.log(`IsInteractiveShell: True`);
-}
+Deno.exit(returnCode);
