@@ -1070,6 +1070,12 @@ const isAdmin = await testIsAdmin();
 const _isInteractiveShell = testIsInteractiveShell();
 let returnCode = 0;
 
+if (Deno.build.os !== "windows") {
+	logger.warning(`(main) This script is designed for Windows. Please run it on a Windows OS.`);
+	returnCode = 1;
+	Deno.exit(returnCode);
+}
+
 switch (Deno.args.length) {
 	case 0: {
 		if (isAdmin) {
@@ -1169,20 +1175,6 @@ switch (Deno.args.length) {
 				await saveExplorerBookmarks();
 				await removeIntegration();
 				await addIntegration();
-				// await startCleanup();
-				// await openExplorerBookmarks("C:/Users/dev/Documents/Explorer-Bookmarks/ExplorerBookmarks-20230820-124821.txt");
-				/*
-				const script = "Get-ChildItem";
-				logger.info(`(main) Calling powershell function to run script:`, script);
-				const [code, stdout, stderr] = await powershell(script);
-				logger.info(`(main) return code:`, code);
-				if (code === 0) {
-					logger.info(`(main) stdout:`, stdout);
-				} else {
-					logger.info(`(main) stdout:`, stdout);
-					logger.info(`(main) stderr:`, stderr);
-				}
-				*/
 			}
 				break;
 

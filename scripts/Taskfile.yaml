@@ -79,7 +79,7 @@ tasks:
             --allow-run \
             --allow-sys \
             --allow-env \
-            wrapper/explorer-bookmarks.ts task
+            wrapper/explorer-bookmarks.ts dev
 
   watch-explorer-bookmarks:
     desc: Develop the Explorer Bookmarks script using deno watch mode
