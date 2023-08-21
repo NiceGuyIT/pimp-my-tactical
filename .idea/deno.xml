@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DenoSettings">
+    <option name="denoPath" value="$USER_HOME$/.cargo/bin/deno" />
     <option name="useDeno" value="true" />
   </component>
 </project>

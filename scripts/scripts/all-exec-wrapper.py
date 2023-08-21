@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: MIT
 # Source: https://github.com/NiceGuyIT/pimp-my-tactical
 
+# TODO: Run deno using an https path instead of local filesystem path.
+
 """
 all-exec-wrapper will run a script from a URL. The binary is downloaded to EXEC_BIN_DIR if it doesn't exist. The
 script is downloaded from the URL into a tmp file, and then the binary is executed passing the script as an argument.
