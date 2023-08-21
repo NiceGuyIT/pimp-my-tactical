@@ -15,10 +15,12 @@ the binaries.
 The requests module is not a base module and required.
 
 How to use Deno to specify remote URLs. Given the following script:
-  https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/main/scripts/wrapper/hello-world.ts
+  https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/v0.0.1/scripts/wrapper/hello-world.ts
 set the following environment variables:
   - EXEC_REMOTE_REPO=https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical
-  - EXEC_REMOTE_VERSION=main (This is also the git branch)
+  - EXEC_REMOTE_VERSION=main (git branch)
+  OR
+  - EXEC_REMOTE_VERSION=v0.0.1 (git tag, versioned)
   - EXEC_REMOTE_SCRIPT=scripts/wrapper/hello-world.ts
 The final form is as follows:
   ${EXEC_REMOTE_REPO}/${EXEC_REMOTE_VERSION}/${EXEC_REMOTE_SCRIPT}
