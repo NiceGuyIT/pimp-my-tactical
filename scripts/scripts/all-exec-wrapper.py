@@ -36,6 +36,7 @@ Environmental variables
 - EXEC_REMOTE_REPO is used as the base URL to compose the remote URL for Deno. Alternative to EXEC_DOWNLOAD_URL.
 - EXEC_REMOTE_VERSION is used as the version to compose the remote URL for Deno. Alternative to EXEC_DOWNLOAD_URL.
 - EXEC_REMOTE_SCRIPT is used as the path and script to compose the remote URL for Deno. Alternative to EXEC_DOWNLOAD_URL.
+- All environmental variables are passed to the child process by default!
 """
 import logging
 import os

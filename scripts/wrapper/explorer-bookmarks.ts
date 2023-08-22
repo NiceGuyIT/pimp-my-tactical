@@ -2,7 +2,6 @@ import * as path from "https://deno.land/std@0.198.0/path/mod.ts";
 import * as fmt from "https://deno.land/std@0.198.0/fmt/printf.ts";
 import * as datetime from "https://deno.land/std@0.198.0/datetime/mod.ts";
 import * as log from "https://deno.land/std@0.198.0/log/mod.ts";
-import CommandOutput = Deno.CommandOutput;
 
 /**
  * EB_LOG_LEVEL is the log level of the script.
@@ -75,8 +74,7 @@ interface BookmarksConfig {
 	install: {
 		/**
 		 * Path to the script to install. This script will be copied to this path.
-		 * TODO: Old name: ScriptPath
-		 * Environmental variable: EB_SCRIPT_PATH
+		 * Environmental variable: EB_INSTALL_PATH
 		 * FIXME: Change this to .ts and compile with Deno
 		 * FIXME: Uninstall the .ps1 file
 		 */
@@ -93,90 +91,83 @@ interface BookmarksConfig {
 		/**
 		 * Directory to save the explorer bookmarks file
 		 * Do not check if the directory exists because it will be created later.
-		 * TODO: Old name: $BookmarksDir
-		 * Environmental variable: EB_BOOKMARKS_DIR
+		 * Environmental variable: EB_SAVE_DIR
 		 * Default: $ENV:UserProfile\Documents\Explorer-Bookmarks\
 		 */
 		dir: string;
 
 		/**
 		 * Filename of the current bookmark file to create
-		 * TODO: Old name: $FilenamePrefix
-		 * Environmental variable: EB_BOOKMARKS_DIR
+		 * Environmental variable: EB_SAVE_DIR
 		 * Default: ExplorerBookmarks-{yyyyMMdd-HHmmss}.txt
 		 */
 		filename: string;
 
 		/**
-		 * Prefix of the explorer bookmarks file
-		 * TODO: Old name: $FilenamePrefix
-		 * Environmental variable: EB_FILENAME_PREFIX
+		 * Prefix of the explorer bookmarks filename
+		 * Environmental variable: EB_SAVE_FILENAME_PREFIX
 		 * Default: ExplorerBookmarks
 		 */
 		prefix: string;
 
 		/**
 		 * Filename pattern to search for all bookmark filenames
-		 * TODO: Old name: FilenamePattern
 		 */
 		pattern: RegExp;
+
+		/**
+		 * Maximum number of bookmark files to save
+		 * Environmental variable: EB_SAVE_MAX_NUM_FILES
+		 */
+		maxNumFiles: {
+			min: number;
+			max: number;
+			default: number;
+			current: number;
+		}
+	},
+
+	restore: {
+		/**
+		 * Maximum file size to restore
+		 * Environmental variable: EB_RESTORE_MAX_FILE_SIZE
+		 */
+		maxFileSize: {
+			min: number;
+			max: number;
+			default: number;
+			current: number;
+		},
+
+		/**
+		 * Maximum number of windows to restore. Technically this is calculated by counting the number of lines in the
+		 * file to restore.
+		 * Environmental variable: EB_RESTORE_MAX_WINDOWS
+		 */
+		maxWindows: {
+			min: number;
+			max: number;
+			default: number;
+			current: number;
+		},
+
+		/**
+		 * Delay in seconds between opening windows. This can be a fraction.
+		 * Environmental variable: EB_RESTORE_DELAY_SECONDS
+		 */
+		delaySeconds: {
+			min: number;
+			max: number;
+			default: number;
+			current: number;
+		},
 	},
 
 	scheduledTask: {
 		/**
-		 * Scheduled task name in Windows
-		 * TODO: Old name: TaskName
+		 * Name of the Scheduled Task in Windows
 		 */
 		name: string;
-	},
-
-	/**
-	 * Maximum number of bookmark files to save
-	 * TODO: Old name: MaxNumFiles
-	 * Environmental variable: EB_MAX_NUM_FILES
-	 */
-	maxNumFiles: {
-		min: number;
-		max: number;
-		default: number;
-		current: number;
-	},
-
-	/**
-	 * Maximum file size to restore
-	 * TODO: Old name: MaxNumFiles
-	 * Environmental variable: EB_RESTORE_MAX_FILE_SIZE
-	 */
-	restoreMaxFileSize: {
-		min: number;
-		max: number;
-		default: number;
-		current: number;
-	},
-
-	/**
-	 * Maximum number of windows to restore. Technically this is calculated by counting the number of lines in the
-	 * file to restore.
-	 * TODO: Old name: RestoreMaxWindows
-	 * Environmental variable: EB_RESTORE_MAX_WINDOWS
-	 */
-	restoreMaxWindows: {
-		min: number;
-		max: number;
-		default: number;
-		current: number;
-	},
-
-	/**
-	 * Delay in seconds between opening windows. This can be a fraction.
-	 * TODO: Old name: RestoreDelaySeconds
-	 * Environmental variable: EB_RESTORE_DELAY_SECONDS
-	 */
-	restoreDelaySeconds: {
-		min: number;
-		max: number;
-		default: number;
-		current: number;
 	},
 
 }
@@ -194,101 +185,102 @@ const bookmarksConfig: BookmarksConfig = {
 		filename: "ExplorerBookmarks-yyyyMMdd-HHmmss.txt",
 		prefix: "ExplorerBookmarks",
 		pattern: new RegExp(`ExplorerBookmarks-.*\.txt`),
+		maxNumFiles: {
+			min: 1,
+			max: 1000,
+			default: 20,
+			current: 20,
+		},
+	},
+	restore: {
+		maxFileSize: {
+			min: 1,
+			max: 4096,
+			default: 1024,
+			current: 1024,
+		},
+		maxWindows: {
+			min: 1,
+			max: 100,
+			default: 50,
+			current: 50,
+		},
+		delaySeconds: {
+			min: 0,
+			max: 10,
+			default: 0.5,
+			current: 0.5,
+		},
 	},
 	scheduledTask: {
 		name: "Restore-Explorer-Bookmarks",
 	},
-	maxNumFiles: {
-		min: 1,
-		max: 1000,
-		default: 20,
-		current: 20,
-	},
-	restoreMaxFileSize: {
-		min: 1,
-		max: 4096,
-		default: 1024,
-		current: 1024,
-	},
-	restoreMaxWindows: {
-		min: 1,
-		max: 100,
-		default: 50,
-		current: 50,
-	},
-	restoreDelaySeconds: {
-		min: 0,
-		max: 10,
-		default: 0.5,
-		current: 0.5,
-	},
-
 };
 
 /**
  * Process the environmental variables and bookmarksConfig.
  */
 function processConfig() {
-	if (Deno.env.has("EB_SCRIPT_PATH")) {
-		bookmarksConfig.install.path = Deno.env.get("EB_SCRIPT_PATH")!;
+	if (Deno.env.has("EB_INSTALL_PATH")) {
+		bookmarksConfig.install.path = Deno.env.get("EB_INSTALL_PATH")!;
 	}
 
-	if (Deno.env.has("EB_BOOKMARKS_DIR")) {
-		bookmarksConfig.save.dir = Deno.env.get("EB_BOOKMARKS_DIR")!;
+	if (Deno.env.has("EB_SAVE_DIR")) {
+		bookmarksConfig.save.dir = Deno.env.get("EB_SAVE_DIR")!;
 	}
 
-	if (Deno.env.has("EB_FILENAME_PREFIX")) {
-		bookmarksConfig.save.prefix = Deno.env.get("EB_FILENAME_PREFIX")!;
+	if (Deno.env.has("EB_SAVE_FILENAME_PREFIX")) {
+		bookmarksConfig.save.prefix = Deno.env.get("EB_SAVE_FILENAME_PREFIX")!;
 	}
 
 	bookmarksConfig.save.pattern = new RegExp(`${bookmarksConfig.save.prefix}-.*\.txt`);
 	bookmarksConfig.save.filename = `${bookmarksConfig.save.prefix}-${datetime.format(new Date(), "yyyyMMdd-HHmmss")}.txt`;
 
-	if (Deno.env.has("EB_MAX_NUM_FILES")) {
-		const envMaxNumFiles = Number(Deno.env.get("EB_FILENAME_PREFIX")!);
-		if ((envMaxNumFiles < bookmarksConfig.maxNumFiles.min) ||
-			(envMaxNumFiles > bookmarksConfig.maxNumFiles.max)) {
-			logger.warning(`(main) EB_MAX_NUM_FILES is not within the allowable range: ` +
-				`${bookmarksConfig.maxNumFiles.min} <= ${envMaxNumFiles} <= ${bookmarksConfig.maxNumFiles.max}`);
-			logger.warning(`(main) EB_MAX_NUM_FILES: Using default of ${bookmarksConfig.maxNumFiles.default}`);
+	if (Deno.env.has("EB_SAVE_MAX_NUM_FILES")) {
+		const envMaxNumFiles = Number(Deno.env.get("EB_SAVE_MAX_NUM_FILES")!);
+		if ((envMaxNumFiles < bookmarksConfig.save.maxNumFiles.min) ||
+			(envMaxNumFiles > bookmarksConfig.save.maxNumFiles.max)) {
+			logger.warning(`(main) EB_SAVE_MAX_NUM_FILES is not within the allowable range: ` +
+				`${bookmarksConfig.save.maxNumFiles.min} <= ${envMaxNumFiles} <= ${bookmarksConfig.save.maxNumFiles.max}`);
+			logger.warning(`(main) EB_SAVE_MAX_NUM_FILES: Using default of ${bookmarksConfig.save.maxNumFiles.default}`);
 		} else {
-			bookmarksConfig.maxNumFiles.current = Number(Deno.env.get("EB_MAX_NUM_FILES")!);
+			bookmarksConfig.save.maxNumFiles.current = Number(Deno.env.get("EB_SAVE_MAX_NUM_FILES")!);
 		}
 	}
 
 	if (Deno.env.has("EB_RESTORE_MAX_FILE_SIZE")) {
 		const envRestoreMaxFileSize = Number(Deno.env.get("EB_RESTORE_MAX_FILE_SIZE")!);
-		if ((envRestoreMaxFileSize < bookmarksConfig.restoreMaxFileSize.min) ||
-			(envRestoreMaxFileSize > bookmarksConfig.restoreMaxFileSize.max)) {
-			logger.warning(`(main) EB_MAX_NUM_FILES is not within the allowable range: ` +
-				`${bookmarksConfig.restoreMaxFileSize.min} <= ${envRestoreMaxFileSize} <= ${bookmarksConfig.restoreMaxFileSize.max}`);
-			logger.warning(`(main) EB_MAX_NUM_FILES: Using default of ${bookmarksConfig.restoreMaxFileSize.default}`);
+		if ((envRestoreMaxFileSize < bookmarksConfig.restore.maxFileSize.min) ||
+			(envRestoreMaxFileSize > bookmarksConfig.restore.maxFileSize.max)) {
+			logger.warning(`(main) EB_SAVE_MAX_NUM_FILES is not within the allowable range: ` +
+				`${bookmarksConfig.restore.maxFileSize.min} <= ${envRestoreMaxFileSize} <= ${bookmarksConfig.restore.maxFileSize.max}`);
+			logger.warning(`(main) EB_SAVE_MAX_NUM_FILES: Using default of ${bookmarksConfig.restore.maxFileSize.default}`);
 		} else {
-			bookmarksConfig.restoreMaxFileSize.current = Number(Deno.env.get("EB_RESTORE_MAX_FILE_SIZE")!);
+			bookmarksConfig.restore.maxFileSize.current = Number(Deno.env.get("EB_RESTORE_MAX_FILE_SIZE")!);
 		}
 	}
 
 	if (Deno.env.has("EB_RESTORE_MAX_WINDOWS")) {
 		const envRestoreMaxWindows = Number(Deno.env.get("EB_RESTORE_MAX_WINDOWS")!);
-		if ((envRestoreMaxWindows < bookmarksConfig.restoreMaxWindows.min) ||
-			(envRestoreMaxWindows > bookmarksConfig.restoreMaxWindows.max)) {
+		if ((envRestoreMaxWindows < bookmarksConfig.restore.maxWindows.min) ||
+			(envRestoreMaxWindows > bookmarksConfig.restore.maxWindows.max)) {
 			logger.warning(`(main) EB_RESTORE_MAX_WINDOWS is not within the allowable range: ` +
-				`${bookmarksConfig.restoreMaxWindows.min} <= ${envRestoreMaxWindows} <= ${bookmarksConfig.restoreMaxWindows.max}`);
-			logger.warning(`(main) EB_RESTORE_MAX_WINDOWS: Using default of ${bookmarksConfig.restoreMaxWindows.default}`);
+				`${bookmarksConfig.restore.maxWindows.min} <= ${envRestoreMaxWindows} <= ${bookmarksConfig.restore.maxWindows.max}`);
+			logger.warning(`(main) EB_RESTORE_MAX_WINDOWS: Using default of ${bookmarksConfig.restore.maxWindows.default}`);
 		} else {
-			bookmarksConfig.restoreMaxWindows.current = Number(Deno.env.get("EB_RESTORE_MAX_WINDOWS")!);
+			bookmarksConfig.restore.maxWindows.current = Number(Deno.env.get("EB_RESTORE_MAX_WINDOWS")!);
 		}
 	}
 
 	if (Deno.env.has("EB_RESTORE_DELAY_SECONDS")) {
 		const envRestoreDelaySeconds = Number(Deno.env.get("EB_RESTORE_DELAY_SECONDS")!);
-		if ((envRestoreDelaySeconds < bookmarksConfig.restoreDelaySeconds.min) ||
-			(envRestoreDelaySeconds > bookmarksConfig.restoreDelaySeconds.max)) {
+		if ((envRestoreDelaySeconds < bookmarksConfig.restore.delaySeconds.min) ||
+			(envRestoreDelaySeconds > bookmarksConfig.restore.delaySeconds.max)) {
 			logger.warning(`(main) EB_RESTORE_DELAY_SECONDS is not within the allowable range: ` +
-				`${bookmarksConfig.restoreDelaySeconds.min} <= ${envRestoreDelaySeconds} <= ${bookmarksConfig.restoreDelaySeconds.max}`);
-			logger.warning(`(main) EB_RESTORE_DELAY_SECONDS: Using default of ${bookmarksConfig.restoreDelaySeconds.default}`);
+				`${bookmarksConfig.restore.delaySeconds.min} <= ${envRestoreDelaySeconds} <= ${bookmarksConfig.restore.delaySeconds.max}`);
+			logger.warning(`(main) EB_RESTORE_DELAY_SECONDS: Using default of ${bookmarksConfig.restore.delaySeconds.default}`);
 		} else {
-			bookmarksConfig.restoreDelaySeconds.current = Number(Deno.env.get("EB_RESTORE_DELAY_SECONDS")!);
+			bookmarksConfig.restore.delaySeconds.current = Number(Deno.env.get("EB_RESTORE_DELAY_SECONDS")!);
 		}
 	}
 
@@ -377,10 +369,10 @@ async function startCleanup() {
 		}
 	}
 
-	if (fileArray.length > bookmarksConfig.maxNumFiles.current) {
+	if (fileArray.length > bookmarksConfig.save.maxNumFiles.current) {
 		// Remove files more than the configured maximum.
-		logger.info(`(startCleanup) Removing files more than the configured maximum: ${bookmarksConfig.maxNumFiles.current}`);
-		while (fileArray.length > bookmarksConfig.maxNumFiles.current) {
+		logger.info(`(startCleanup) Removing files more than the configured maximum: ${bookmarksConfig.save.maxNumFiles.current}`);
+		while (fileArray.length > bookmarksConfig.save.maxNumFiles.current) {
 			logger.info(`(startCleanup) Removing file: ${fileArray[0][0]}`);
 			Deno.removeSync(path.join(bookmarksConfig.save.dir, fileArray[0][0]));
 			fileArray.shift();
@@ -728,7 +720,7 @@ async function installScript() {
 	];
 
 	let stderrText = "";
-	let commandOutput: CommandOutput;
+	let commandOutput: Deno.CommandOutput;
 	try {
 		// define command used to create the subprocess
 		const command = new Deno.Command(cmd, {
@@ -806,10 +798,10 @@ async function openExplorerBookmarks(bookmarkFile: string) {
 	// This also checks if the file exists.
 	try {
 		const fileInfo = await Deno.stat(bookmarkFile);
-		if (fileInfo.size > bookmarksConfig.restoreMaxFileSize.current) {
+		if (fileInfo.size > bookmarksConfig.restore.maxFileSize.current) {
 			logger.warning(`(openExplorerBookmarks) Requested file ${bookmarkFile} is more than the maximum file size`);
 			logger.warning(`(openExplorerBookmarks) File size: ${fileInfo.size}`);
-			logger.warning(`(openExplorerBookmarks) Maximum file size: ${bookmarksConfig.restoreMaxFileSize.current}`);
+			logger.warning(`(openExplorerBookmarks) Maximum file size: ${bookmarksConfig.restore.maxFileSize.current}`);
 			return;
 		}
 	} catch (err) {
@@ -827,10 +819,10 @@ async function openExplorerBookmarks(bookmarkFile: string) {
 	let bookmarkPaths: string[];
 	try {
 		bookmarkPaths = (await Deno.readTextFile(bookmarkFile)).trim().split(`\n`);
-		if (bookmarkPaths.length > bookmarksConfig.restoreMaxWindows.current) {
+		if (bookmarkPaths.length > bookmarksConfig.restore.maxWindows.current) {
 			logger.warning(`(openExplorerBookmarks) Number of explorer windows to restore is more than the maximum allowed`);
 			logger.warning(`(openExplorerBookmarks) Windows to restore: ${bookmarkPaths.length}`);
-			logger.warning(`(openExplorerBookmarks) Maximum windows to restore: ${bookmarksConfig.restoreMaxWindows.current}`);
+			logger.warning(`(openExplorerBookmarks) Maximum windows to restore: ${bookmarksConfig.restore.maxWindows.current}`);
 			return;
 		}
 	} catch (err) {
@@ -952,7 +944,7 @@ async function powershell(script: string): Promise<[number, string, string]> {
 
 		let stdoutText = "";
 		let stderrText = "";
-		let commandOutput: CommandOutput;
+		let commandOutput: Deno.CommandOutput;
 		try {
 			// define command used to create the subprocess
 			// logger.debug(`(powershell) Running powershell script: ${cmd}`);
@@ -1036,30 +1028,44 @@ function spawn(cmd: string, args: string[]) {
  * @constructor
  */
 function GetHelp() {
-	const help = `explorer-bookmarks.ps1
-	Bookmark the Windows Explorer paths in a file.
+	const help = `Explorer Bookmarks will "bookmark" the open Explorer windows.
 
-explorer-bookmarks.ps1 <file>
+Usage:
+
+deno explorer-bookmarks.ts
+	Bookmark the open Windows Explorer paths in a file.
+
+deno explorer-bookmarks.ts <file>
 	Load the bookmarks from a file. This is usually done from a right-click menu.
 
-explorer-bookmarks.ps1 task
-	This command is run from the scheduled task to restore the last bookmarks saved.
+$ENV:EB_ACTION=task; deno explorer-bookmarks.ts
+	This command is run from the scheduled task to restore the last bookmarks saved opon login.
 
-explorer-bookmarks.ps1 <install | uninstall | reinstall>
+$ENV:EB_ACTION=<install | uninstall | reinstall>; deno explorer-bookmarks.ts
 	Install/uninstall/reinstall the integration: Script, right click menu and scheduled task.
 
 Environmental variables:
 
-	EB_BOOKMARKS_DIR - Directory to save the explorer bookmark files.
-	EB_MAX_NUM_FILES - Maximum number of bookmark files to save.
-	EB_FILENAME_PREFIX - Filename prefix to use for the bookmark files.
+    EB_ACTION - Administrative action to take. One of task, install, uninstall, reinstall
+	EB_INSTALL_PATH - Where to install this script for the integration.
+	EB_SAVE_DIR - Directory to save the explorer bookmark files.
+	EB_SAVE_FILENAME_PREFIX - Filename prefix to use for the bookmark files.
+	EB_SAVE_MAX_NUM_FILES - Maximum number of bookmark files to save.
 	EB_RESTORE_MAX_FILE_SIZE - Maximum file size to restore.
 	EB_RESTORE_MAX_WINDOWS - Maximum number of windows to restore.
 	  Note: This counts the lines in the file, not actual windows.
 	EB_RESTORE_DELAY_SECONDS - Delay in seconds between opening each window.
-	EB_SCRIPT_PATH - Where to install this script for the integration.
-	EB_LOG_LEVEL - Set the log level of the script.
-	`;
+	EB_LOG_LEVEL - Set the log level of the program.
+
+Deno permissions
+	This script requires the following permissions. See https://deno.land/manual/basics/permissions
+	for an explanation of the permissions.
+		--allow-read
+		--allow-write
+		--allow-run
+		--allow-sys
+		--allow-env
+`;
 	console.log(help);
 }
 
