@@ -414,6 +414,7 @@ async function startCleanup() {
 async function addIntegration() {
 	logger.info(`(addIntegration) Adding the integration into explorer's right-click menu`);
 
+	// FIXME: Backslashes are converted to forward slashes before when adding to the registry.
 	const psScript = `
 		$null = New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
 
@@ -447,7 +448,7 @@ async function addIntegration() {
 		$KeyName = "Command"
 		$Path = "HKCR:\\SystemFileAssociations\\.txt\\Shell\\Explorer-Bookmarks\\Command"
 		$Name = "(Default)"
-		$Value = ("${bookmarksConfig.install.path} \`"%1\`"")
+		$Value = ("\`"C:\\ProgramData\\TacticalRMM\\Explorer-Bookmarks.exe\`" \`"%1\`"")
 		$Type = "String"
 		// Need to check for the key and create it before checking for and creating the property.
 		if (-not(Test-Path -Path $Path)) {
