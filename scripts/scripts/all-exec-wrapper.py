@@ -1,4 +1,4 @@
-#!/usr/bin/env /opt/exec-wrapper/bin/rustpython
+#!/opt/exec-wrapper/bin/rustpython
 # Copyright 2023, Nice Guy IT, LLC. All rights reserved.
 # SPDX-License-Identifier: MIT
 # Source: https://github.com/NiceGuyIT/pimp-my-tactical
@@ -26,16 +26,16 @@ The final form is as follows:
   ${EXEC_REMOTE_REPO}/${EXEC_REMOTE_VERSION}/${EXEC_REMOTE_SCRIPT}
 
 Environmental variables
-- EXEC_BINARY is the program to run.
-- EXEC_DOWNLOAD_URL is the script to run. This is expected to be the raw URL, not an HTML url.
-- EXEC_REMOTE_REPO is used as the base URL to compose the remote URL for Deno. Alternative to EXEC_DOWNLOAD_URL.
-- EXEC_REMOTE_VERSION is used as the version to compose the remote URL for Deno. Alternative to EXEC_DOWNLOAD_URL.
-- EXEC_REMOTE_SCRIPT is used as the path and script to compose the remote URL for Deno. Alternative to EXEC_DOWNLOAD_URL.
 - EXEC_LOG_LEVEL sets the log level.
 - EXEC_BIN_DIR is the directory to save the binaries.
   Default:
     Windows: 'C:\\ProgramData\\exec-wrapper\\bin'
     *nix: '/opt/exec-wrapper/bin'
+- EXEC_BINARY is the program to run.
+- EXEC_DOWNLOAD_URL is the script to run. This is expected to be the raw URL, not an HTML url.
+- EXEC_REMOTE_REPO is used as the base URL to compose the remote URL for Deno. Alternative to EXEC_DOWNLOAD_URL.
+- EXEC_REMOTE_VERSION is used as the version to compose the remote URL for Deno. Alternative to EXEC_DOWNLOAD_URL.
+- EXEC_REMOTE_SCRIPT is used as the path and script to compose the remote URL for Deno. Alternative to EXEC_DOWNLOAD_URL.
 """
 import logging
 import os

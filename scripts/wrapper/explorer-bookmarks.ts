@@ -490,7 +490,7 @@ async function addIntegration() {
 async function removeIntegration() {
 	logger.info(`(removeIntegration) Removing the integration from explorer's right-click menu`);
 	// HKCR is not mounted by default
-    // @see https://superuser.com/questions/1621508/windows-10-powershell-registry-drives-are-not-working-properly
+	// @see https://superuser.com/questions/1621508/windows-10-powershell-registry-drives-are-not-working-properly
 	const psScript = `
 		$null = New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
 
@@ -877,7 +877,7 @@ async function openExplorerBookmarks(bookmarkFile: string) {
  * @constructor
  */
 async function testIsAdmin() {
-	let cmd = "";
+	let cmd: string;
 	let args: string[] = [];
 	if (Deno.build.os === "windows") {
 		cmd = "C:/Windows/System32/whoami.exe";
@@ -1076,121 +1076,134 @@ if (Deno.build.os !== "windows") {
 	Deno.exit(returnCode);
 }
 
-switch (Deno.args.length) {
-	case 0: {
-		if (isAdmin) {
-			logger.warning(`(main) This script should not be run as an administrator.`);
+if (Deno.env.has("EB_ACTION")) {
+	switch (Deno.env.get("EB_ACTION")?.toLowerCase()) {
+
+		case "install": {
+			if (isAdmin) {
+				await installScript();
+				await addIntegration();
+				await addScheduledTask();
+			} else {
+				logger.error(`(main) Failed to install the integration. Administrator permission is required.`);
+				returnCode = 1;
+			}
+		}
+			break;
+
+		case "uninstall": {
+			if (isAdmin) {
+				uninstallScript();
+				await removeIntegration();
+				await removeScheduledTask();
+			} else {
+				logger.error(`(main) Failed to uninstall the integration. Administrator permission is required.`);
+				returnCode = 1;
+			}
+		}
+			break;
+
+		case "reinstall": {
+			if (isAdmin) {
+				// Uninstall
+				uninstallScript();
+				await removeIntegration();
+				await removeScheduledTask();
+				logger.info(`(main)`);
+
+				// Install
+				await installScript();
+				await addIntegration();
+				await addScheduledTask();
+			} else {
+				logger.error(`(main) Failed to reinstall the integration. Administrator permission is required.`);
+				returnCode = 1;
+			}
+		}
+			break;
+
+		case "dev": {
+			await saveExplorerBookmarks();
+			await removeIntegration();
+			await addIntegration();
+		}
+			break;
+
+		case "help":
+			GetHelp();
+			break;
+
+		default:
+			logger.error(`(main) Invalid action: '${Deno.env.get("EB_ACTION")?.toLowerCase()}'`);
+			GetHelp();
 			returnCode = 1;
 			break;
-		}
-
-		// Zero args: Save the Explorer paths
-		// User configuration
-		newExplorerDir(bookmarksConfig.save.dir);
-		await saveExplorerBookmarks();
-		await startCleanup();
 	}
-		break;
+} else {
 
-	case 1: {
-		switch (Deno.args[0].toLowerCase()) {
-			case "-h":
-			case "--help":
-				GetHelp();
+	switch (Deno.args.length) {
+		case 0: {
+			if (isAdmin) {
+				logger.warning(`(main) This script should not be run as an administrator.`);
+				returnCode = 1;
 				break;
+			}
 
-			case "task": {
-				// Scheduled task to open the bookmarks in the last saved file.
-				if (isAdmin) {
-					logger.warning(`(main) This script should not be run as an administrator.`);
-					returnCode = 1;
-					break;
-				}
+			// Zero args: Save the Explorer paths
+			// User configuration
+			newExplorerDir(bookmarksConfig.save.dir);
+			await saveExplorerBookmarks();
+			await startCleanup();
+		}
+			break;
 
-				// Open the bookmarks saved in the last bookmark file.
-				let fileArray: [string, Date][] = [];
-				for await (const dirEntry of Deno.readDir(bookmarksConfig.save.dir)) {
-					if (dirEntry.isFile && (dirEntry.name.match(bookmarksConfig.save.pattern) !== null)) {
-						const fileInfo = Deno.statSync(path.join(bookmarksConfig.save.dir, dirEntry.name));
-						fileArray.push([dirEntry.name, fileInfo.mtime ?? new Date(0)]);
+		case 1: {
+			switch (Deno.args[0].toLowerCase()) {
+
+				case "task": {
+					// Scheduled task to open the bookmarks in the last saved file.
+					if (isAdmin) {
+						logger.warning(`(main) This script should not be run as an administrator.`);
+						returnCode = 1;
+						break;
 					}
+
+					// Open the bookmarks saved in the last bookmark file.
+					let fileArray: [string, Date][] = [];
+					for await (const dirEntry of Deno.readDir(bookmarksConfig.save.dir)) {
+						if (dirEntry.isFile && (dirEntry.name.match(bookmarksConfig.save.pattern) !== null)) {
+							const fileInfo = Deno.statSync(path.join(bookmarksConfig.save.dir, dirEntry.name));
+							fileArray.push([dirEntry.name, fileInfo.mtime ?? new Date(0)]);
+						}
+					}
+					if (fileArray.length >= 1) {
+						fileArray = fileArray.sort((a, b) => {
+							return a[1].getTime() - b[1].getTime();
+						});
+						// Sleep 10 seconds to allow the desktop and other tasks to load.
+						const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+						await sleep(10 * 1000);
+						await openExplorerBookmarks(path.join(bookmarksConfig.save.dir, fileArray[fileArray.length - 1][0]));
+					}
+
 				}
-				if (fileArray.length >= 1) {
-					fileArray = fileArray.sort((a, b) => {
-						return a[1].getTime() - b[1].getTime();
-					});
-					// Sleep 10 seconds to allow the desktop and other tasks to load.
-					const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-					await sleep(10*1000);
-					await openExplorerBookmarks(path.join(bookmarksConfig.save.dir, fileArray[fileArray.length - 1][0]));
+					break;
+
+				default: {
+					// Open the bookmarks from the right-click menu in Explorer.
+					await openExplorerBookmarks(Deno.args[0]);
+					// FIXME: Should this sleep?
 				}
-
+					break;
 			}
-				break;
-
-			case "install": {
-				if (isAdmin) {
-					await installScript();
-					await addIntegration();
-					await addScheduledTask();
-				} else {
-					logger.error(`(main) Failed to install the integration. Administrator permission is required.`);
-					returnCode = 1;
-				}
-			}
-				break;
-
-			case "uninstall": {
-				if (isAdmin) {
-					uninstallScript();
-					await removeIntegration();
-					await removeScheduledTask();
-				} else {
-					logger.error(`(main) Failed to uninstall the integration. Administrator permission is required.`);
-					returnCode = 1;
-				}
-			}
-				break;
-
-			case "reinstall": {
-				if (isAdmin) {
-					// Uninstall
-					uninstallScript();
-					await removeIntegration();
-					await removeScheduledTask();
-					logger.info(`(main)`);
-
-					// Install
-					await installScript();
-					await addIntegration();
-					await addScheduledTask();
-				} else {
-					logger.error(`(main) Failed to reinstall the integration. Administrator permission is required.`);
-					returnCode = 1;
-				}
-			}
-				break;
-
-			case "dev": {
-				await saveExplorerBookmarks();
-				await removeIntegration();
-				await addIntegration();
-			}
-				break;
-
-			default: {
-				await openExplorerBookmarks(Deno.args[0]);
-				// FIXME: Should this sleep?
-			}
-				break;
 		}
-	}
-		break;
+			break;
 
-	default: {
-		logger.error(`(main) Wrong number of arguments: '${Deno.args.length}'`);
-		GetHelp();
-		returnCode = 1;
+		default: {
+			logger.error(`(main) Wrong number of arguments: '${Deno.args.length}'`);
+			GetHelp();
+			returnCode = 1;
+		}
 	}
 }
 

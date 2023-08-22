@@ -15,5 +15,6 @@
       </option>
     </inspection_tool>
     <inspection_tool class="ShellCheck" enabled="true" level="ERROR" enabled_by_default="true" editorAttributes="ERRORS_ATTRIBUTES" />
+    <inspection_tool class="TsLint" enabled="true" level="WARNING" enabled_by_default="true" />
   </profile>
 </component>
