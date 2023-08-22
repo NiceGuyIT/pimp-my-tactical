@@ -2,6 +2,7 @@ import * as path from "https://deno.land/std@0.198.0/path/mod.ts";
 import * as fmt from "https://deno.land/std@0.198.0/fmt/printf.ts";
 import * as datetime from "https://deno.land/std@0.198.0/datetime/mod.ts";
 import * as log from "https://deno.land/std@0.198.0/log/mod.ts";
+import { HandlerOptions } from "https://deno.land/std@0.198.0/log/mod.ts";
 
 /**
  * EB_LOG_LEVEL is the log level of the script.
@@ -56,11 +57,31 @@ log.setup({
 				return msg;
 			},
 		}),
+		file: new log.handlers.FileHandler("DEBUG", {
+			filename: "C:\\ProgramData\\TacticalRMM\\Explorer-Bookmarks.log",
+			formatter: (logRecord) => {
+				const timestamp = datetime.format(logRecord.datetime, "HH:mm:ss.SSS");
+				let msg = `${timestamp} [${logRecord.levelName}] ${logRecord.msg}`;
+				logRecord.args.forEach((arg) => {
+					switch (typeof (arg)) {
+						case "undefined":
+							msg += " {undefined}";
+							break;
+						case "object":
+							msg += fmt.sprintf(" %i", arg);
+							break;
+						default:
+							msg += fmt.sprintf(" {%v}", arg);
+					}
+				});
+				return msg;
+			},
+		}),
 	},
 	// Assign handlers to loggers
 	loggers: {
 		default: {
-			handlers: ["console"],
+			handlers: ["console", "file"],
 			level: levelName,
 		}
 	}
@@ -177,8 +198,8 @@ interface BookmarksConfig {
  */
 const bookmarksConfig: BookmarksConfig = {
 	install: {
-		path: `C:/ProgramData/TacticalRMM/Explorer-Bookmarks.exe`,
-		deno: `C:/ProgramData/exec-wrapper/bin/deno.exe`,
+		path: `C:\\ProgramData\\TacticalRMM\\Explorer-Bookmarks.exe`,
+		deno: `C:\\ProgramData\\exec-wrapper\\bin\\deno.exe`,
 	},
 	save: {
 		dir: path.join(Deno.env.get("UserProfile") ?? "", `/Documents/Explorer-Bookmarks`),
@@ -772,7 +793,7 @@ function uninstallScript() {
 	}
 
 	// Clean up PowerShell version of the script
-	const ps1 = `C:/ProgramData/TacticalRMM/Explorer-Bookmarks.ps1`;
+	const ps1 = `C:\\ProgramData\\TacticalRMM\\Explorer-Bookmarks.ps1`;
 	try {
 		logger.info(`(uninstallScript) Uninstalling PowerShell script ${ps1}`);
 		Deno.removeSync(ps1);
