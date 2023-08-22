@@ -58,7 +58,9 @@ log.setup({
 			},
 		}),
 		file: new log.handlers.FileHandler("DEBUG", {
-			filename: "C:\\ProgramData\\TacticalRMM\\Explorer-Bookmarks.log",
+			// FIXME: This needs to be dynamic
+			// filename: "C:\\ProgramData\\TacticalRMM\\Explorer-Bookmarks.log",
+			filename: "C:\\Users\\dev\\Documents\\Explorer-Bookmarks\\Explorer-Bookmarks.log",
 			formatter: (logRecord) => {
 				const timestamp = datetime.format(logRecord.datetime, "HH:mm:ss.SSS");
 				let msg = `${timestamp} [${logRecord.levelName}] ${logRecord.msg}`;
