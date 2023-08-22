@@ -701,7 +701,9 @@ async function removeScheduledTask() {
  * @constructor
  */
 async function installScript() {
-	const source = path.fromFileUrl(Deno.mainModule);
+	// FIXME: This is temporarily hard coded until it can be determined programmatically.
+	// const source = path.fromFileUrl(Deno.mainModule);
+	const source = "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/v0.0.3/scripts/wrapper/explorer-bookmarks.ts";
 	const cmd = Deno.execPath();
 	const args = [
 		"compile",
