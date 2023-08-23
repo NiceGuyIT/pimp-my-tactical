@@ -941,8 +941,13 @@ async function testIsAdmin() {
 	// Process the output
 	const stdoutText = new TextDecoder().decode(stdout);
 	if (Deno.build.os === "windows") {
-		return (stdoutText.includes("Mandatory Label\\High Mandatory Level") ||
-			stdoutText.includes("Mandatory Label\\System Mandatory Level"));
+		if (stdoutText.includes("Mandatory Label\\High Mandatory Level") ||
+			stdoutText.includes("Mandatory Label\\System Mandatory Level")) {
+			logger.debug(`(testIsAdmin) isAdmin:`, true);
+			logger.debug(`(testIsAdmin) Mandatory Label\\High Mandatory Level:`, stdoutText.includes("Mandatory Label\\High Mandatory Level"));
+			logger.debug(`(testIsAdmin) Mandatory Label\\System Mandatory Level:`, stdoutText.includes("Mandatory Label\\System Mandatory Level"));
+			return true;
+		}
 	} else {
 		return (stdoutText.includes("root"));
 	}
