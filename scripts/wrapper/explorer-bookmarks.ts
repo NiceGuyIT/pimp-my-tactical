@@ -1133,9 +1133,6 @@ Deno permissions
 	console.log(help);
 }
 
-processConfig();
-dumpConfig()
-
 const isAdmin = await testIsAdmin();
 logger.debug(`(main) isAdmin: ${isAdmin}`);
 // Test for interactivity is not needed because Deno doesn't close the shell like PowerShell does.
@@ -1147,6 +1144,11 @@ if (Deno.build.os !== "windows") {
 	returnCode = 1;
 	Deno.exit(returnCode);
 }
+
+processConfig();
+dumpConfig()
+returnCode = 1;
+Deno.exit(returnCode);
 
 if (Deno.env.has("EB_ACTION")) {
 	switch (Deno.env.get("EB_ACTION")?.toLowerCase()) {
