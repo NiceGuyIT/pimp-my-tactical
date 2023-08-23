@@ -1117,6 +1117,7 @@ Deno permissions
 processConfig();
 
 const isAdmin = await testIsAdmin();
+logger.debug(`(main) isAdmin: ${isAdmin}`);
 // Test for interactivity is not needed because Deno doesn't close the shell like PowerShell does.
 const _isInteractiveShell = testIsInteractiveShell();
 let returnCode = 0;
