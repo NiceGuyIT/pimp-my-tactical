@@ -1138,8 +1138,6 @@ if (Deno.build.os !== "windows") {
 	Deno.exit(returnCode);
 }
 
-Deno.exit(returnCode);
-
 if (Deno.env.has("EB_ACTION")) {
 	switch (Deno.env.get("EB_ACTION")?.toLowerCase()) {
 
