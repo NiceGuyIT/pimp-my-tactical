@@ -313,7 +313,9 @@ function processConfig() {
  * Dump the bookmarksConfig to the logs.
  */
 function dumpConfig() {
-	logger.info(`(dumpConfig) bookmarksConfig:`, bookmarksConfig);
+	logger.debug(`(dumpConfig) bookmarksConfig:`);
+	logger.debug(bookmarksConfig);
+	logger.debug(`(dumpConfig) ENV UserProfile:`, Deno.env.get("UserProfile")?? "");
 }
 
 /**
