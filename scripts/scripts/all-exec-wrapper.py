@@ -150,6 +150,8 @@ def exec_script(binary_name: str, script: str) -> str:
         # FIXME: This needs to be cleaned up by specifying the permission in ENV VARS.
         command = [
             bin_file,
+            # Don't display the download progress output.
+            "--quiet",
             "run",
             # Reload will reload the remote scripts to the cache. This is needed for development but not production.
             # A version tag will solve this.
@@ -170,12 +172,17 @@ def exec_script(binary_name: str, script: str) -> str:
 
     try:
         logger.info(f'Executing "{command}"')
-        output = subprocess.check_output(command, universal_newlines=True)
+        # FIXME: Capture stderr in addition to stdout.
+        output = subprocess.check_output(
+            command,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True)
         logger.info(f"Output from script:")
         print(output)
         return output
     except subprocess.CalledProcessError as err2:
         logger.error(f"Failed to exec: {command}")
+        logger.error(f"Output: {err2.output}")
         logger.error(traceback.format_exc())
         logger.error(err2)
         raise
