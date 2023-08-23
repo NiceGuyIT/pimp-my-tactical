@@ -314,8 +314,7 @@ function processConfig() {
  * Dump the bookmarksConfig to the logs.
  */
 function dumpConfig() {
-	logger.debug(`(dumpConfig) bookmarksConfig:`);
-	logger.debug(bookmarksConfig);
+	logger.debug(`(dumpConfig) bookmarksConfig:`, bookmarksConfig);
 	logger.debug(`(dumpConfig) ENV USERPROFILE:`, Deno.env.get("USERPROFILE")?? "");
 }
 
@@ -1136,7 +1135,6 @@ Deno permissions
 
 processConfig();
 dumpConfig()
-Deno.exit(0)
 
 const isAdmin = await testIsAdmin();
 logger.debug(`(main) isAdmin: ${isAdmin}`);
