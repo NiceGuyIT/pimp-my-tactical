@@ -407,7 +407,25 @@ async function startCleanup() {
 /**
  * Add the Explorer Bookmarks integration to the right-click menu for *.txt files.
  *
- * Another way of doing this:
+ * TODO: The right-click menu assumes the program is a windows program. Deno is a console program.
+ * CMD, PowerShell or similar is needed to run the deno compiled program. This results in 2 windows: CMD and Deno.
+ * This is not desirable but is the only way to get it to work.
+ *
+ * Here is the final command.
+ *   cmd /d /e:off /f:off /v:off /c ""C:\ProgramData\TacticalRMM\Explorer-Bookmarks.exe" "%1""
+ *
+ * Double quotes are needed because CMD will strip the first and last quotes under certain circumstances.
+ * @see https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/cmd#remarks
+ *   If the previous conditions aren't met, string is processed by examining the first character to verify whether it
+ *   is an opening quotation mark. If the first character is an opening quotation mark, it is stripped along with the
+ *   closing quotation mark. Any text following the closing quotation marks is preserved.
+ *
+ * Deno issues to compile as a windows program:
+ * - https://github.com/denoland/deno/discussions/11638
+ * - https://github.com/denoland/deno/discussions/12941
+ * - https://github.com/denoland/deno/issues/13107
+ *
+ * An alternative might be to do this:
  * @see https://stackoverflow.com/questions/10618977/how-to-add-an-entry-in-the-windows-context-menu-for-files-with-a-specific-extens
  * @constructor
  */
@@ -448,7 +466,7 @@ async function addIntegration() {
 		$KeyName = "Command"
 		$Path = "HKCR:\\SystemFileAssociations\\.txt\\Shell\\Explorer-Bookmarks\\Command"
 		$Name = "(Default)"
-		$Value = ("\`"C:\\ProgramData\\TacticalRMM\\Explorer-Bookmarks.exe\`" \`"%1\`"")
+		$Value = ("cmd /d /e:off /f:off /v:off /c \`"\`"${bookmarksConfig.install.path}\`" \`"%1\`"\`"")
 		$Type = "String"
 		// Need to check for the key and create it before checking for and creating the property.
 		if (-not(Test-Path -Path $Path)) {
