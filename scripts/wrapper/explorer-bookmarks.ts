@@ -1147,6 +1147,7 @@ if (Deno.build.os !== "windows") {
 
 processConfig();
 dumpConfig()
+logger.debug(`(main) env var:`, Deno.env.toObject());
 returnCode = 1;
 Deno.exit(returnCode);
 
