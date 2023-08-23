@@ -930,6 +930,7 @@ async function testIsAdmin() {
 	});
 	const {code, stdout, stderr} = await command.output();
 
+	// FIXME: Add try/catch and better exception handling
 	// Capture any errors
 	if (code !== 0) {
 		logger.error(`(testIsAdmin) Error executing command '${cmd}': return code: ${code}`);
@@ -1136,6 +1137,8 @@ if (Deno.build.os !== "windows") {
 	returnCode = 1;
 	Deno.exit(returnCode);
 }
+
+Deno.exit(returnCode);
 
 if (Deno.env.has("EB_ACTION")) {
 	switch (Deno.env.get("EB_ACTION")?.toLowerCase()) {
