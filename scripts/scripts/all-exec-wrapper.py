@@ -3,8 +3,6 @@
 # SPDX-License-Identifier: MIT
 # Source: https://github.com/NiceGuyIT/pimp-my-tactical
 
-# TODO: Run deno using an https path instead of local filesystem path.
-
 """
 all-exec-wrapper will run a script from a URL. The binary is downloaded to EXEC_BIN_DIR if it doesn't exist. The
 script is downloaded from the URL into a tmp file, and then the binary is executed passing the script as an argument.
@@ -36,6 +34,9 @@ Environmental variables
 - EXEC_REMOTE_REPO is used as the base URL to compose the remote URL for Deno. Alternative to EXEC_DOWNLOAD_URL.
 - EXEC_REMOTE_VERSION is used as the version to compose the remote URL for Deno. Alternative to EXEC_DOWNLOAD_URL.
 - EXEC_REMOTE_SCRIPT is used as the path and script to compose the remote URL for Deno. Alternative to EXEC_DOWNLOAD_URL.
+- EXEC_DENO_RUN_FLAGS are added to the command line for 'deno run'.
+- EXEC_DENO_PERMISSION_FLAGS are added to the command line for 'deno run' to set the permissions.
+  See https://deno.land/manual/basics/permissions
 - All environmental variables are passed to the child process by default!
 """
 import logging
@@ -153,17 +154,15 @@ def exec_script(binary_name: str, script: str) -> str:
             # Don't display the download progress output.
             "--quiet",
             "run",
-            # Reload will reload the remote scripts to the cache. This is needed for development but not production.
-            # A version tag will solve this.
-            # TODO: Put this behind a configurable env var.
-            "--reload",
-            "--allow-read",
-            "--allow-write",
-            "--allow-run",
-            "--allow-sys",
-            "--allow-env",
-            script,
         ]
+        # Use EXEC_DENO_RUN_FLAGS=--reload to bypass the cache for development.
+        # For production, the version tag will force a new version to be downloaded.
+        if "EXEC_DENO_RUN_FLAGS" in os.environ:
+            command.extend(os.getenv("EXEC_DENO_RUN_FLAGS").split())
+        # Add deno run permission flags.
+        if "EXEC_DENO_PERMISSION_FLAGS" in os.environ:
+            command.extend(os.getenv("EXEC_DENO_PERMISSION_FLAGS").split())
+        command.append(script)
     elif binary_name == "nushell":
         command = [bin_file, script]
     else:
@@ -174,9 +173,8 @@ def exec_script(binary_name: str, script: str) -> str:
         logger.info(f'Executing "{command}"')
         # FIXME: Capture stderr in addition to stdout.
         output = subprocess.check_output(
-            command,
-            stderr=subprocess.STDOUT,
-            universal_newlines=True)
+            command, stderr=subprocess.STDOUT, universal_newlines=True
+        )
         logger.info(f"Output from script:")
         print(output)
         return output

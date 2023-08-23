@@ -310,6 +310,13 @@ function processConfig() {
 }
 
 /**
+ * Dump the bookmarksConfig to the logs.
+ */
+function dumpConfig() {
+	logger.info(`(dumpConfig) bookmarksConfig:`, bookmarksConfig);
+}
+
+/**
  * newExplorerDir will create the Explorer Bookmarks directory if it does not already exist.
  * @param dir
  * @constructor
@@ -942,8 +949,8 @@ async function testIsAdmin() {
 	// Process the output
 	const stdoutText = new TextDecoder().decode(stdout);
 	if (Deno.build.os === "windows") {
-		logger.debug(`(testIsAdmin) includes Mandatory Label\\High Mandatory Level:`, stdoutText.includes("Mandatory Label\\High Mandatory Level"));
-		logger.debug(`(testIsAdmin) includes Mandatory Label\\System Mandatory Level:`, stdoutText.includes("Mandatory Label\\System Mandatory Level"));
+		logger.debug(`(testIsAdmin) includes 'Mandatory Label\\High Mandatory Level':`, stdoutText.includes("Mandatory Label\\High Mandatory Level"));
+		logger.debug(`(testIsAdmin) includes 'Mandatory Label\\System Mandatory Level':`, stdoutText.includes("Mandatory Label\\System Mandatory Level"));
 		if (stdoutText.includes("Mandatory Label\\High Mandatory Level") ||
 			stdoutText.includes("Mandatory Label\\System Mandatory Level")) {
 			logger.debug(`(testIsAdmin) isAdmin:`, true);
@@ -953,7 +960,7 @@ async function testIsAdmin() {
 			return false;
 		}
 	} else {
-		logger.debug(`(testIsAdmin) includes root:`, stdoutText.includes("root"));
+		logger.debug(`(testIsAdmin) includes 'root':`, stdoutText.includes("root"));
 		return (stdoutText.includes("root"));
 	}
 }
@@ -1125,6 +1132,8 @@ Deno permissions
 }
 
 processConfig();
+dumpConfig()
+Deno.exit(0)
 
 const isAdmin = await testIsAdmin();
 logger.debug(`(main) isAdmin: ${isAdmin}`);
