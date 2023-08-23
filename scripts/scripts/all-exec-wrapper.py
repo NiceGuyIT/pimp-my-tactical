@@ -151,6 +151,10 @@ def exec_script(binary_name: str, script: str) -> str:
         command = [
             bin_file,
             "run",
+            # Reload will reload the remote scripts to the cache. This is needed for development but not production.
+            # A version tag will solve this.
+            # TODO: Put this behind a configurable env var.
+            "--reload",
             "--allow-read",
             "--allow-write",
             "--allow-run",
