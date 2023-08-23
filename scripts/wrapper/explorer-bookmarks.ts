@@ -115,7 +115,7 @@ interface BookmarksConfig {
 		 * Directory to save the explorer bookmarks file
 		 * Do not check if the directory exists because it will be created later.
 		 * Environmental variable: EB_SAVE_DIR
-		 * Default: $ENV:UserProfile\Documents\Explorer-Bookmarks\
+		 * Default: $ENV:USERPROFILE\Documents\Explorer-Bookmarks\
 		 */
 		dir: string;
 
@@ -204,7 +204,8 @@ const bookmarksConfig: BookmarksConfig = {
 		deno: `C:\\ProgramData\\exec-wrapper\\bin\\deno.exe`,
 	},
 	save: {
-		dir: path.join(Deno.env.get("UserProfile") ?? "", `/Documents/Explorer-Bookmarks`),
+		// Environment variables are case sensitive.
+		dir: path.join(Deno.env.get("USERPROFILE") ?? "", `/Documents/Explorer-Bookmarks`),
 		filename: "ExplorerBookmarks-yyyyMMdd-HHmmss.txt",
 		prefix: "ExplorerBookmarks",
 		pattern: new RegExp(`ExplorerBookmarks-.*\.txt`),
@@ -315,7 +316,7 @@ function processConfig() {
 function dumpConfig() {
 	logger.debug(`(dumpConfig) bookmarksConfig:`);
 	logger.debug(bookmarksConfig);
-	logger.debug(`(dumpConfig) ENV UserProfile:`, Deno.env.get("UserProfile")?? "");
+	logger.debug(`(dumpConfig) ENV USERPROFILE:`, Deno.env.get("USERPROFILE")?? "");
 }
 
 /**
