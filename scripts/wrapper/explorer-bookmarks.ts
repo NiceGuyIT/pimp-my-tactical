@@ -1157,12 +1157,13 @@ if (Deno.env.has("EB_ACTION")) {
 		case "reinstall": {
 			if (isAdmin) {
 				// Uninstall
+				logger.info(`(main) Reinstalling the integration. Uninstalling`);
 				uninstallScript();
 				await removeIntegration();
 				await removeScheduledTask();
-				logger.info(`(main)`);
 
 				// Install
+				logger.info(`(main) Reinstalling the integration. Installing`);
 				await installScript();
 				await addIntegration();
 				await addScheduledTask();
