@@ -148,7 +148,6 @@ def exec_script(binary_name: str, script: str) -> str:
     if binary_name == "rustpython":
         command = [bin_file, script]
     elif binary_name == "deno":
-        # FIXME: This needs to be cleaned up by specifying the permission in ENV VARS.
         command = [
             bin_file,
             # Don't display the download progress output.

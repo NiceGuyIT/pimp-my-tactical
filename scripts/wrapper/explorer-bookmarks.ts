@@ -1,8 +1,8 @@
 import * as path from "https://deno.land/std@0.198.0/path/mod.ts";
 import * as fmt from "https://deno.land/std@0.198.0/fmt/printf.ts";
+import * as colors from "https://deno.land/std@0.198.0/fmt/colors.ts";
 import * as datetime from "https://deno.land/std@0.198.0/datetime/mod.ts";
 import * as log from "https://deno.land/std@0.198.0/log/mod.ts";
-import { HandlerOptions } from "https://deno.land/std@0.198.0/log/mod.ts";
 
 /**
  * EB_LOG_LEVEL is the log level of the script.
@@ -58,9 +58,8 @@ log.setup({
 			},
 		}),
 		file: new log.handlers.FileHandler("DEBUG", {
-			// FIXME: This needs to be dynamic
-			// filename: "C:\\ProgramData\\TacticalRMM\\Explorer-Bookmarks.log",
-			filename: "C:\\Users\\dev\\Documents\\Explorer-Bookmarks\\Explorer-Bookmarks.log",
+			// TODO: Does this need to be logged into the user's directory?
+			filename: "C:\\ProgramData\\TacticalRMM\\Explorer-Bookmarks.log",
 			formatter: (logRecord) => {
 				const timestamp = datetime.format(logRecord.datetime, "HH:mm:ss.SSS");
 				let msg = `${timestamp} [${logRecord.levelName}] ${logRecord.msg}`;
@@ -91,6 +90,14 @@ log.setup({
 const logger = log.getLogger();
 
 /**
+ * Disable color logging
+ */
+if (colors.getColorEnabled()) {
+	colors.setColorEnabled(false);
+}
+logger.debug(`(main) Color enabled:`, colors.getColorEnabled());
+
+/**
  * Bookmarks config definition
  */
 interface BookmarksConfig {
@@ -98,14 +105,12 @@ interface BookmarksConfig {
 		/**
 		 * Path to the script to install. This script will be copied to this path.
 		 * Environmental variable: EB_INSTALL_PATH
-		 * FIXME: Change this to .ts and compile with Deno
-		 * FIXME: Uninstall the .ps1 file
 		 */
 		path: string;
 
 		/**
 		 * Path to the Deno executable.
-		 * FIXME: This probably isn't needed.
+		 * TODO: This probably isn't needed.
 		 */
 		deno: string;
 	},
@@ -316,6 +321,7 @@ function processConfig() {
 function dumpConfig() {
 	logger.debug(`(dumpConfig) bookmarksConfig:`, bookmarksConfig);
 	logger.debug(`(dumpConfig) ENV USERPROFILE:`, Deno.env.get("USERPROFILE")?? "");
+	logger.debug(`(dumpConfig) env var:`, Deno.env.toObject());
 }
 
 /**
@@ -416,7 +422,7 @@ async function startCleanup() {
 /**
  * Add the Explorer Bookmarks integration to the right-click menu for *.txt files.
  *
- * TODO: The right-click menu assumes the program is a windows program. Deno is a console program.
+ * The right-click menu assumes the program is a windows program. Deno is a console program.
  * CMD, PowerShell or similar is needed to run the deno compiled program. This results in 2 windows: CMD and Deno.
  * This is not desirable but is the only way to get it to work.
  *
@@ -441,7 +447,6 @@ async function startCleanup() {
 async function addIntegration() {
 	logger.info(`(addIntegration) Adding the integration into explorer's right-click menu`);
 
-	// FIXME: Backslashes are converted to forward slashes before when adding to the registry.
 	const psScript = `
 		$null = New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
 
@@ -752,26 +757,28 @@ async function removeScheduledTask() {
  * @constructor
  */
 async function installScript() {
-	// FIXME: This is temporarily hard coded until it can be determined programmatically.
-	// const source = path.fromFileUrl(Deno.mainModule);
-	// const source = "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/v0.0.3/scripts/wrapper/explorer-bookmarks.ts";
-	const source = "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/develop/scripts/wrapper/explorer-bookmarks.ts";
+	// These environmental variables are guaranteed to be set because they are used by the exec wrapper to call this
+	// script.
+	const remoteUrl = Deno.env.get("EXEC_REMOTE_REPO") ?? "";
+	const remoteVersion = Deno.env.get("EXEC_REMOTE_VERSION") ?? "";
+	const remoteScript = Deno.env.get("EXEC_REMOTE_SCRIPT") ?? "";
+	const source = `${remoteUrl}/${remoteVersion}/${remoteScript}`;
 	const cmd = Deno.execPath();
 	const args = [
 		"compile",
 		"--no-terminal",
 		"--no-prompt",
-		// These are the permissions needed by the script.
-		"--allow-read",
-		"--allow-write",
-		"--allow-run",
-		"--allow-sys",
-		"--allow-env",
+	];
+	if (Deno.env.has("EXEC_DENO_PERMISSION_FLAGS")) {
+		// EXEC_DENO_PERMISSION_FLAGS is used by the exec wrapper, but also used here to compile.
+		args.push(...(Deno.env.get("EXEC_DENO_PERMISSION_FLAGS") ?? "").split(" "));
+	}
+	args.push(
 		// Save location
 		"--output",
 		bookmarksConfig.install.path,
 		source,
-	];
+	);
 
 	let stderrText = "";
 	let commandOutput: Deno.CommandOutput;
@@ -934,22 +941,35 @@ async function testIsAdmin() {
 		cmd = "/usr/bin/whoami";
 	}
 
-	const command = new Deno.Command(cmd, {
-		args: args,
-	});
-	const {code, stdout, stderr} = await command.output();
+	let stdoutText = "";
+	let stderrText = "";
+	let commandOutput: Deno.CommandOutput;
+	try {
+		const command = new Deno.Command(cmd, {
+			args: args,
+		});
+		commandOutput = await command.output();
+		stdoutText = new TextDecoder().decode(commandOutput.stdout);
+		stderrText = new TextDecoder().decode(commandOutput.stderr);
+	} catch (err) {
+		logger.error(`(testIsAdmin) Error executing command:`, cmd);
+		logger.error(`(testIsAdmin) err:`, err);
+		logger.error(`(testIsAdmin) stdout:`, stdoutText);
+		logger.error(`(testIsAdmin) stderr:`, stderrText);
+		throw err;
+	}
 
-	// FIXME: Add try/catch and better exception handling
 	// Capture any errors
-	if (code !== 0) {
-		logger.error(`(testIsAdmin) Error executing command '${cmd}': return code: ${code}`);
-		const stderrText = new TextDecoder().decode(stderr);
+	if ((commandOutput.code !== 0) || (!commandOutput.success)) {
+		logger.error(`(testIsAdmin) Error executing command '${cmd}'`);
+		logger.error(`(testIsAdmin) Return code:`, commandOutput.code);
+		logger.error(`(testIsAdmin) Success:`, commandOutput.success);
+		logger.error(`(testIsAdmin) stdout:\n`, stdoutText);
 		logger.error(`(testIsAdmin) stderr:\n`, stderrText);
 		throw stderrText;
 	}
 
 	// Process the output
-	const stdoutText = new TextDecoder().decode(stdout);
 	if (Deno.build.os === "windows") {
 		logger.debug(`(testIsAdmin) includes 'Mandatory Label\\High Mandatory Level':`, stdoutText.includes("Mandatory Label\\High Mandatory Level"));
 		logger.debug(`(testIsAdmin) includes 'Mandatory Label\\System Mandatory Level':`, stdoutText.includes("Mandatory Label\\System Mandatory Level"));
@@ -1139,17 +1159,17 @@ logger.debug(`(main) isAdmin: ${isAdmin}`);
 const _isInteractiveShell = testIsInteractiveShell();
 let returnCode = 0;
 
+processConfig();
+if (levelName === "DEBUG") {
+	// Dump the config when debugging.
+	dumpConfig()
+}
+
 if (Deno.build.os !== "windows") {
 	logger.warning(`(main) This script is designed for Windows. Please run it on a Windows OS.`);
 	returnCode = 1;
 	Deno.exit(returnCode);
 }
-
-processConfig();
-dumpConfig()
-logger.debug(`(main) env var:`, Deno.env.toObject());
-returnCode = 1;
-Deno.exit(returnCode);
 
 if (Deno.env.has("EB_ACTION")) {
 	switch (Deno.env.get("EB_ACTION")?.toLowerCase()) {
