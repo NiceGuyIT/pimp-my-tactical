@@ -1226,14 +1226,16 @@ if (Deno.env.has("EB_ACTION")) {
 		}
 			break;
 
-		case "help":
+		case "help": {
 			GetHelp();
+		}
 			break;
 
-		default:
+		default: {
 			logger.error(`(main) Invalid action: '${Deno.env.get("EB_ACTION")?.toLowerCase()}'`);
 			GetHelp();
 			returnCode = 1;
+		}
 			break;
 	}
 } else {
@@ -1283,6 +1285,11 @@ if (Deno.env.has("EB_ACTION")) {
 						await openExplorerBookmarks(path.join(bookmarksConfig.save.dir, fileArray[fileArray.length - 1][0]));
 					}
 
+				}
+					break;
+
+				case "help": {
+					GetHelp();
 				}
 					break;
 
