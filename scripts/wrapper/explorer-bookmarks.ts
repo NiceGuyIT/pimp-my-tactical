@@ -58,8 +58,10 @@ log.setup({
 			},
 		}),
 		file: new log.handlers.FileHandler("DEBUG", {
-			// TODO: Does this need to be logged into the user's directory?
-			filename: "C:\\ProgramData\\TacticalRMM\\Explorer-Bookmarks.log",
+			// TODO: Make the log file dynamic
+			filename: (Deno.env.get("USERPROFILE") ?? "").match(/systemprofile$/)
+				? "C:\\ProgramData\\TacticalRMM\\Explorer-Bookmarks.log"
+				: path.join(Deno.env.get("USERPROFILE") ?? "", `\\Documents\\Explorer-Bookmarks\\Explorer-Bookmarks.log`),
 			formatter: (logRecord) => {
 				const timestamp = datetime.format(logRecord.datetime, "HH:mm:ss.SSS");
 				let msg = `${timestamp} [${logRecord.levelName}] ${logRecord.msg}`;
@@ -320,7 +322,7 @@ function processConfig() {
  */
 function dumpConfig() {
 	logger.debug(`(dumpConfig) bookmarksConfig:`, bookmarksConfig);
-	logger.debug(`(dumpConfig) ENV USERPROFILE:`, Deno.env.get("USERPROFILE")?? "");
+	logger.debug(`(dumpConfig) ENV USERPROFILE:`, Deno.env.get("USERPROFILE") ?? "");
 	logger.debug(`(dumpConfig) env var:`, Deno.env.toObject());
 }
 
@@ -1163,7 +1165,7 @@ let returnCode = 0;
 processConfig();
 if (levelName === "DEBUG") {
 	// Dump the config when debugging.
-	dumpConfig()
+	dumpConfig();
 }
 
 if (Deno.build.os !== "windows") {
