@@ -792,6 +792,7 @@ async function installScript() {
 
 		// create subprocess and collect output
 		logger.debug(`(installScript) Compiling '${source}' to executable '${bookmarksConfig.install.path}'`);
+		logger.debug(`(installScript) args:`, args);
 		commandOutput = await command.output();
 		stderrText = new TextDecoder().decode(commandOutput.stderr);
 	} catch (err) {

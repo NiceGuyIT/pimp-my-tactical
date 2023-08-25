@@ -2,6 +2,7 @@
 # Copyright 2023, Nice Guy IT, LLC. All rights reserved.
 # SPDX-License-Identifier: MIT
 # Source: https://github.com/NiceGuyIT/pimp-my-tactical
+# Version: v0.0.3
 
 """
 all-exec-wrapper will run a script from a URL. The binary is downloaded to EXEC_BIN_DIR if it doesn't exist. The
@@ -179,6 +180,7 @@ def exec_script(binary_name: str, script: str) -> str:
         return output
     except subprocess.CalledProcessError as err2:
         logger.error(f"Failed to exec: {command}")
+        logger.error(f"Return code: {err2.returncode}")
         logger.error(f"Output: {err2.output}")
         logger.error(traceback.format_exc())
         logger.error(err2)
