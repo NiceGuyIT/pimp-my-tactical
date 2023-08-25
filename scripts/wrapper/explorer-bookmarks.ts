@@ -768,9 +768,12 @@ async function installScript() {
 	const cmd = Deno.execPath();
 	const args = [
 		"compile",
-		"--no-terminal",
 		"--no-prompt",
 	];
+	if (levelName !== "DEBUG") {
+		// Hide the terminal also hides critical errors. Only hide it if not debugging.
+		args.push("--no-terminal");
+	}
 	if (Deno.env.has("EXEC_DENO_PERMISSION_FLAGS")) {
 		// EXEC_DENO_PERMISSION_FLAGS is used by the exec wrapper, but also used here to compile.
 		args.push(...(Deno.env.get("EXEC_DENO_PERMISSION_FLAGS") ?? "").split(" "));
