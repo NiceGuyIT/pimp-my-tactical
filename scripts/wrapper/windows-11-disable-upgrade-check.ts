@@ -4,7 +4,7 @@ import * as colors from "https://deno.land/std@0.200.0/fmt/colors.ts";
 // import * as datetime from "https://deno.land/std@0.200.0/datetime/mod.ts";
 import * as log from "https://deno.land/std@0.200.0/log/mod.ts";
 // TODO: Add versioning to the URL
-import * as utils from "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/main/scripts/lib/mod.ts";
+import * as utils from "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/main/scripts/ts-lib/mod.ts";
 // import * as utils from "./mod.ts";
 
 /**
