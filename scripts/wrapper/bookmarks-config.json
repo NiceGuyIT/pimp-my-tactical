@@ -1,0 +1,41 @@
+{
+  "install": {
+    "path": "C:\\ProgramData\\TacticalRMM\\Explorer-Bookmarks.exe",
+    "deno": "C:\\ProgramData\\exec-wrapper\\bin\\deno.exe"
+  },
+  "save": {
+    "dir": "C:\\WINDOWS\\system32\\config\\systemprofile\\Documents\\Explorer-Bookmarks",
+    "filename": "ExplorerBookmarks-20230823-194459.txt",
+    "prefix": "ExplorerBookmarks",
+    "pattern": "/ExplorerBookmarks-.*.txt/",
+    "maxNumFiles": {
+      "min": 1,
+      "max": 1000,
+      "default": 20,
+      "current": 20
+    }
+  },
+  "restore": {
+    "maxFileSize": {
+      "min": 1,
+      "max": 4096,
+      "default": 1024,
+      "current": 1024
+    },
+    "maxWindows": {
+      "min": 1,
+      "max": 100,
+      "default": 50,
+      "current": 50
+    },
+    "delaySeconds": {
+      "min": 0,
+      "max": 10,
+      "default": 0.5,
+      "current": 0.5
+    }
+  },
+  "scheduledTask": {
+    "name": "Restore-Explorer-Bookmarks"
+  }
+}

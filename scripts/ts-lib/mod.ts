@@ -1,7 +1,6 @@
 import * as fmt from "https://deno.land/std@0.200.0/fmt/printf.ts";
 import * as datetime from "https://deno.land/std@0.200.0/datetime/mod.ts";
 import * as log from "https://deno.land/std@0.200.0/log/mod.ts";
-// import * as utils from "./mod.ts";
 
 /**
  * Configure the logging to use a format handler to pretty-print objects.

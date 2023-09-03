@@ -40,6 +40,12 @@ let regPropertyName = '';
 let regPropertyType = '';
 let regPropertyValue: string | number | boolean = '';
 
+/**
+ * Not found:
+ * Get-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate' -Name 'DisableWUfBSafeguards'
+ *
+ *
+ */
 regKey = `HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate`;
 regPropertyName = `DisableWUfBSafeguards`;
 regPropertyType = `DWord`;
@@ -59,6 +65,10 @@ try {
 	}
 }
 
+/**
+ * Home-01: Not found:
+ * Get-ItemProperty -Path 'HKLM:\SYSTEM\Setup\MoSetup' -Name 'AllowUpgradesWithUnsupportedTPMOrCPU'
+ */
 regKey = `HKLM:\\SYSTEM\\Setup\\MoSetup`;
 regPropertyName = `AllowUpgradesWithUnsupportedTPMOrCPU`;
 regPropertyType = `DWord`;
