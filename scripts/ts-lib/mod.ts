@@ -12,8 +12,8 @@ export const MyLogConfig: log.LogConfig = {
     // Define handlers
     handlers: {
         console: new log.handlers.ConsoleHandler("DEBUG", {
-            formatter: (logRecord) => {
-                const timestamp = datetime.format(logRecord.datetime, "HH:mm:ss.SSS");
+            formatter: (logRecord: log.LogRecord) => {
+                const timestamp = datetime.format(logRecord.datetime, "yyyy-MM-dd HH:mm:ss.SSS");
                 let msg = `${timestamp} [${logRecord.levelName}] ${logRecord.msg}`;
                 logRecord.args.forEach((arg) => {
                     switch (typeof (arg)) {
