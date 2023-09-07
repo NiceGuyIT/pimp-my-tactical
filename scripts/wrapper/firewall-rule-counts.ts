@@ -26,7 +26,7 @@ log.setup(tslib.MyLogConfig);
 const logger = log.getLogger();
 
 // Are we developers?
-const dev = true;
+const dev = false;
 
 if (dev) {
 	// Enable color logging

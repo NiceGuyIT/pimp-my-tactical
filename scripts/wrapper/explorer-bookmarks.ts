@@ -1073,7 +1073,7 @@ Environmental variables:
 	EB_RESTORE_MAX_WINDOWS - Maximum number of windows to restore.
 	  Note: This counts the lines in the file, not actual windows.
 	EB_RESTORE_DELAY_SECONDS - Delay in seconds between opening each window.
-	EB_LOG_LEVEL - Set the log level of the program.
+	TS_LOG_LEVEL - Set the log level of the TypeScript logger.
 
 Deno permissions
 	This script requires the following permissions. See https://deno.land/manual/basics/permissions
