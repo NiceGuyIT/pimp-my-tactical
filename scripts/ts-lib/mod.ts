@@ -1,6 +1,6 @@
-import * as fmt from "https://deno.land/std@0.200.0/fmt/printf.ts";
-import * as datetime from "https://deno.land/std@0.200.0/datetime/mod.ts";
-import * as log from "https://deno.land/std@0.200.0/log/mod.ts";
+import * as fmt from "https://deno.land/std@0.201.0/fmt/printf.ts";
+import * as datetime from "https://deno.land/std@0.201.0/datetime/mod.ts";
+import * as log from "https://deno.land/std@0.201.0/log/mod.ts";
 
 /**
  * Configure the logging to use a format handler to pretty-print objects.
@@ -66,6 +66,24 @@ export const MyLogConfig: log.LogConfig = {
             level: (Deno.env.get("TS_LOG_LEVEL") ?? "WARNING").toUpperCase() as log.LevelName,
         }
     }
+};
+
+/**
+ * Interface for functions that return a result.
+ * TODO: This may change once I learn how to throw an error in a Promise.
+ */
+export interface Result {
+    value?: string | string[] | number;
+    err?: Error | unknown;
+}
+
+/**
+ * Interface for functions that exec a command and return the output.
+ */
+export interface ExecResult {
+    stdout?: string;
+    stderr?: string;
+    returnCode: number;
 }
 
 /**
@@ -76,13 +94,27 @@ export const MyLogConfig: log.LogConfig = {
  * @see https://learn.microsoft.com/en-us/powershell/scripting/learn/deep-dives/everything-about-exceptions?view=powershell-7.3
  * @param script
  */
-export async function Win_RunPowershell(script: string): Promise<[number, string, string]> {
+export async function Win_RunPowershell(script: string): Promise<ExecResult> {
     const logger = log.getLogger();
     if (Deno.build.os !== "windows") {
-        logger.warning(`(WinRunPowershell) Attempt to run powershell command on non-Windows OS`);
-        logger.warning(`(WinRunPowershell)`, script);
-        return [0, "", ""];
+        logger.warning(`(Win_RunPowershell) Attempt to run powershell command on non-Windows OS`);
+        logger.warning(`(Win_RunPowershell)`, script);
+        return {
+            returnCode: 1,
+            stdout: `(Win_RunPowershell) Attempt to run powershell command on non-Windows OS`,
+        };
     }
+
+    // Enclose the script in a try/catch block to catch the exception and handle it.
+    // $Error[0].ToString() can be used in place of $_.ToString()
+    const psScript = `try {
+	$ErrorActionPreference = "Stop";
+	${script}
+} catch {
+	[Console]::Error.WriteLine( $_.ToString() );
+	Exit(1);
+}
+`;
 
     // https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_powershell_exe?view=powershell-5.1&viewFallbackFrom=powershell-7.2
     const cmd = "c:/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe";
@@ -95,53 +127,52 @@ export async function Win_RunPowershell(script: string): Promise<[number, string
         "-OutputFormat",
         "text",
         "-Command",
-        script,
+        psScript,
     ];
 
-    let stdoutText = "";
-    let stderrText = "";
-    let commandOutput: Deno.CommandOutput;
-    try {
-        // define command used to create the subprocess
-        // logger.debug(`(powershell) Running powershell script: ${cmd}`);
-        // logger.debug(`(powershell) Args:`, args);
-        const command = new Deno.Command(cmd, {
-            args: args,
-            stdout: "piped",
-            stderr: "piped",
-        });
+    logger.debug(`(Win_RunPowershell) Running powershell script:`, cmd);
+    logger.debug(`(Win_RunPowershell) Args:`, args);
+    // define command used to create the subprocess
+    return await (new Deno.Command(cmd, {
+        args: args,
+        stdout: "piped",
+        stderr: "piped",
+    })
+        .output()
+        .then(commandOutput => {
+            const execResult: ExecResult = {returnCode: 0};
+            execResult.stderr = new TextDecoder().decode(commandOutput.stderr);
+            execResult.stdout = new TextDecoder().decode(commandOutput.stdout);
+            execResult.returnCode = commandOutput.code;
 
-        // create subprocess and collect output
-        commandOutput = await command.output();
-        stderrText = new TextDecoder().decode(commandOutput.stderr);
-        stdoutText = new TextDecoder().decode(commandOutput.stdout);
-    } catch (err) {
-        if (err instanceof Deno.errors.NotFound) {
-            logger.error(`(WinRunPowershell) Error executing command:`, cmd);
-            logger.error(`(WinRunPowershell) err:`, err);
-            logger.error(`(WinRunPowershell) stderr:`, stderrText);
-            logger.error(`(WinRunPowershell) File Not Found:`, cmd);
-            // throw err;
-            return [1, stdoutText, err.message];
-        } else {
-            logger.error(`(WinRunPowershell) Error executing command:`, cmd);
-            logger.error(`(WinRunPowershell) err:`, err);
-            logger.error(`(WinRunPowershell) stderr:`, stderrText);
-            return [1, stdoutText, err.message];
-        }
-    }
-
-    // Capture any errors
-    if ((commandOutput.code !== 0) || (!commandOutput.success)) {
-        logger.error(`(WinRunPowershell) Error executing command '${cmd}'`);
-        logger.error(`(WinRunPowershell) Return code:`, commandOutput.code);
-        logger.error(`(WinRunPowershell) Success:`, commandOutput.success);
-    }
-    return [commandOutput.code, stdoutText, stderrText];
+            // PowerShell always appends a newline for text to/from an external process.
+            // https://github.com/PowerShell/PowerShell/issues/5974
+            // Trim the trailing newline from stdout and stderr.
+            if (execResult.stdout.endsWith("\r\n")) {
+                execResult.stdout = execResult.stdout.slice(0, -2);
+            } else if (execResult.stdout.endsWith("\n")) {
+                execResult.stdout = execResult.stdout.slice(0, -1);
+            }
+            if (execResult.stderr.endsWith("\r\n")) {
+                execResult.stderr = execResult.stderr.slice(0, -2);
+            } else if (execResult.stderr.endsWith("\n")) {
+                execResult.stderr = execResult.stderr.slice(0, -1);
+            }
+            // logger.debug(`(Win_RunPowershell) stdout:`, execResult.stdout);
+            return execResult;
+        })
+        .catch(err => {
+            logger.error(`(Win_RunPowershell) Error executing command:`, cmd);
+            logger.error(`(Win_RunPowershell) err:`, err);
+            const execResult: ExecResult = {returnCode: 0};
+            execResult.stdout = err.message;
+            execResult.returnCode = err.code;
+            return execResult;
+        }));
 }
 
 /**
- * Get the registry value for the given key.
+ * Get the registry keys for the given path.
  * @constructor
  */
 export async function Win_GetRegistryKey(regPath: string, regKey: string): Promise<string[]> {
@@ -151,52 +182,97 @@ export async function Win_GetRegistryKey(regPath: string, regKey: string): Promi
     // $null = New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
     const psScript = `Get-ChildItem -Name '${regPath}' | ConvertTo-Json`;
 
-    let code = 0;
-    let stdout = "";
-    let stderr = "";
-    try {
-        logger.info(`(Win_GetRegistryKey) Adding the right-click integration`);
-        [code, stdout, stderr] = await Win_RunPowershell(psScript);
-        if (code !== 0) {
-            // PowerShell's exception is not passed to Deno's exception. Search for the errors in the output and
-            // handle as necessary.
-            if (stderr.match(/Access is denied/)) {
-                logger.warning(`(Win_GetRegistryKey) Error adding the integration`);
-                logger.warning(`(Win_GetRegistryKey) This script needs to be run with Administrator permission`);
-                logger.warning(`(Win_GetRegistryKey) stderr:`, stderr);
-            } else if (stderr.match(/Requested registry access is not allowed/)) {
-                logger.warning(`(Win_GetRegistryKey) Error adding the integration`);
-                logger.warning(`(Win_GetRegistryKey) This script needs to be run with Administrator permission`);
-                logger.warning(`(Win_GetRegistryKey) stderr:`, stderr);
-            } else {
-                logger.warning(`(Win_GetRegistryKey) return code:`, code);
-                logger.warning(`(Win_GetRegistryKey) stdout:`, stdout);
-                logger.warning(`(Win_GetRegistryKey) stderr:`, stderr);
+    const result = await Win_RunPowershell(psScript)
+        .then((execResult): Result => {
+            if (execResult.returnCode !== 0) {
+                // PowerShell's exception is not passed to Deno's exception. Search for the errors in the output and
+                // handle as necessary.
+                logger.warning(`(Win_GetRegistryKey) Code: return code:`, execResult.returnCode);
+                logger.warning(`(Win_GetRegistryKey) Code: stdout:`, execResult.stdout ?? "Undefined");
+                logger.warning(`(Win_GetRegistryKey) Code: stderr:`, execResult.stderr ?? "Undefined");
+                // throw new Error(stderr);
+                return {err: Error(execResult.stderr)};
+            } else if (execResult.stderr !== "") {
+                // PowerShell's exception is not passed to Deno's exception. Search for the errors in the output and
+                // handle as necessary.
+                logger.warning(`(Win_GetRegistryKey) STDERR: return code:`, execResult.returnCode);
+                logger.warning(`(Win_GetRegistryKey) STDERR: stdout:`, execResult.stdout ?? "Undefined");
+                logger.warning(`(Win_GetRegistryKey) STDERR: stderr:`, execResult.stderr ?? "Undefined");
+                // throw new Error(stderr);
+                return {err: Error(execResult.stderr ?? "Undefined")};
             }
-        }
-    } catch (err: unknown) {
-        if (err instanceof Deno.errors.PermissionDenied) {
-            logger.warning(`(Win_GetRegistryKey) Error adding the integration`);
-            logger.warning(`(Win_GetRegistryKey) This script needs to be run with Administrator permission`);
-            logger.warning(`(Win_GetRegistryKey) err:`, err);
-        } else {
-            logger.error(`(Win_GetRegistryKey) Error adding the integration`);
-            logger.error(`(Win_GetRegistryKey) stderr:`, stderr);
+            return {value: execResult.stdout ?? "Undefined"};
+        })
+        .catch((err: unknown): Result => {
+            // if (err instanceof Deno.errors.PermissionDenied) {
+            logger.error(`(Win_GetRegistryKey) Error getting the registry key`);
             logger.error(`(Win_GetRegistryKey) err:`, err);
-            throw err;
-        }
-    }
+            // throw err;
+            return {err: err};
+        });
 
     // Convert the result to an array of strings representing the registry keys.
     // FIXME: This doesn't work if a single key is returned.
-    const regJson = JSON.parse(stdout);
-    const regKeys: string[] = [];
-    for (const [key, value] of Object.entries(regJson)) {
-        if (!!value && typeof value === "object" && "value" in value && typeof value.value === "string") {
-            regKeys.push(value["value"]);
+    if ("value" in result && result.value) {
+        const regJson = JSON.parse(result.value.toString());
+        const regKeys: string[] = [];
+        for (const [key, value] of Object.entries(regJson)) {
+            if (!!value && typeof value === "object" && "value" in value && typeof value.value === "string") {
+                regKeys.push(value["value"]);
+            }
         }
+        return regKeys;
+    } else {
+        return [];
     }
-    return regKeys;
+}
+
+/**
+ * Get the registry value for the given key and property.
+ * @param {string} regKey - Registry key or path to the registry property.
+ * @param {string} regProperty - Registry property.
+ * @constructor - Get the registry value for the given key and property.
+ * @throws {Error} - If the registry key or property does not exist.
+ * @returns {string | number | string[]} Registry value.
+ */
+export async function Win_GetRegistryValue(regKey: string, regProperty: string): Promise<Result> {
+    const logger = log.getLogger();
+    logger.info(`(Win_GetRegistryKey) Get registry value for key ${regKey} and property ${regProperty}`);
+
+    // $null = New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
+    const psScript = `Get-ItemPropertyValue -Path '${regKey}' -Name '${regProperty}' -ErrorAction Stop`;
+
+    return await Win_RunPowershell(psScript)
+        .then((execResult): Result => {
+            if (execResult.returnCode !== 0) {
+                // PowerShell's exception is not passed to Deno's exception. Search for the errors in the output and
+                // handle as necessary.
+                logger.warning(`(Win_GetRegistryKey) Code: return code:`, execResult.returnCode);
+                logger.warning(`(Win_GetRegistryKey) Code: stdout:`, execResult.stdout ?? "Undefined");
+                logger.warning(`(Win_GetRegistryKey) Code: stderr:`, execResult.stderr ?? "Undefined");
+                // throw new Error(stderr);
+                return {err: Error(execResult.stderr)};
+            } else if (execResult.stderr !== "") {
+                // PowerShell's exception is not passed to Deno's exception. Search for the errors in the output and
+                // handle as necessary.
+                logger.warning(`(Win_GetRegistryKey) STDERR: return code:`, execResult.returnCode);
+                logger.warning(`(Win_GetRegistryKey) STDERR: stdout:`, execResult.stdout ?? "Undefined");
+                logger.warning(`(Win_GetRegistryKey) STDERR: stderr:`, execResult.stderr ?? "Undefined");
+                // throw new Error(stderr);
+                return {err: Error(execResult.stderr ?? "Undefined")};
+            }
+            if (execResult.stdout === "") {
+                logger.warning("(Win_GetRegistryKey) STDOUT is empty:", execResult.stdout);
+            }
+            return {value: execResult.stdout ?? "Undefined"};
+        })
+        .catch((err: unknown): Result => {
+            // if (err instanceof Deno.errors.PermissionDenied) {
+            logger.error(`(Win_GetRegistryKey) Error getting the registry key`);
+            logger.error(`(Win_GetRegistryKey) err:`, err);
+            // throw err;
+            return {err: err};
+        });
 }
 
 /**
@@ -211,7 +287,7 @@ export async function Win_GetRegistryKey(regPath: string, regKey: string): Promi
  */
 export async function Win_SetRegistryValue(
     regKey: string, propertyName: string, propertyType: string, regPropertyValue: string | number
-): Promise<void> {
+): Promise<Result> {
     const logger = log.getLogger();
 
     // $null = New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
@@ -223,88 +299,36 @@ export async function Win_SetRegistryValue(
 			$null = Set-ItemProperty -Path '${regKey}' -Name '${propertyName}' -Value '${regPropertyValue}' -PropertyType '${propertyType}'
 		}
 	`;
-    /*
-        const psScript = `
-            Get-Item HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\
 
-            // KeyPath and KeyName are used to create the registry key.
-            $KeyPath = "HKCR:\\SystemFileAssociations\\.txt"
-            $KeyName = "Shell"
-            $Path = "HKCR:\\SystemFileAssociations\\.txt\\Shell"
-            if (-not(Test-Path -Path $Path)) {
-                $null = New-Item -Path $KeyPath -Name $KeyName
+    logger.info(`(Win_SetRegistry) Setting registry ${regKey}\\${propertyName} to ${regPropertyValue}`);
+    return await Win_RunPowershell(psScript)
+        .then((execResult): Result => {
+            if (execResult.returnCode !== 0) {
+                // PowerShell's exception is not passed to Deno's exception. Search for the errors in the output and
+                // handle as necessary.
+                logger.warning(`(Win_SetRegistry) Code: return code:`, execResult.returnCode);
+                logger.warning(`(Win_SetRegistry) Code: stdout:`, execResult.stdout ?? "Undefined");
+                logger.warning(`(Win_SetRegistry) Code: stderr:`, execResult.stderr ?? "Undefined");
+                // throw new Error(stderr);
+                return {err: Error(execResult.stderr)};
+            } else if (execResult.stderr !== "") {
+                // PowerShell's exception is not passed to Deno's exception. Search for the errors in the output and
+                // handle as necessary.
+                logger.warning(`(Win_SetRegistry) STDERR: return code:`, execResult.returnCode);
+                logger.warning(`(Win_SetRegistry) STDERR: stdout:`, execResult.stdout ?? "Undefined");
+                logger.warning(`(Win_SetRegistry) STDERR: stderr:`, execResult.stderr ?? "Undefined");
+                // throw new Error(stderr);
+                return {err: Error(execResult.stderr ?? "Undefined")};
             }
-
-            // KeyPath and KeyName are used to create the registry key.
-            $KeyPath = "HKCR:\\SystemFileAssociations\\.txt\\Shell"
-            $KeyName = "Explorer-Bookmarks"
-            $Path = "HKCR:\\SystemFileAssociations\\.txt\\Shell\\Explorer-Bookmarks"
-            $Name = "(Default)"
-            $Value = "Restore my Explorer Bookmarks"
-            $Type = "String"
-            // Need to check for the key and create it before checking for and creating the property.
-            if (-not(Test-Path -Path $Path)) {
-                // Create the key
-                $null = New-Item -Path $KeyPath -Name $KeyName
-                if ($null -eq (Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue)) {
-                # Create the property on the key
-                    $null = New-ItemProperty -Path $Path -Name $Name -Value $Value -PropertyType $Type
-                }
-            }
-
-            // KeyPath and KeyName are used to create the registry key.
-            $KeyPath = "HKCR:\\SystemFileAssociations\\.txt\\Shell\\Explorer-Bookmarks"
-            $KeyName = "Command"
-            $Path = "HKCR:\\SystemFileAssociations\\.txt\\Shell\\Explorer-Bookmarks\\Command"
-            $Name = "(Default)"
-            $Value = ("Value")
-            $Type = "String"
-            // Need to check for the key and create it before checking for and creating the property.
-            if (-not(Test-Path -Path $Path)) {
-                // Create the key
-                $null = New-Item -Path $KeyPath -Name $KeyName
-                if ($null -eq (Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue)) {
-                # Create the property on the key
-                    $null = New-ItemProperty -Path $Path -Name $Name -Value $Value -PropertyType $Type
-                }
-            }
-        `;
-    */
-
-    let code = 0;
-    let stdout = "";
-    let stderr = "";
-    try {
-        logger.info(`(Win_SetRegistry) Setting registry ${regKey}\\${propertyName} to ${regPropertyValue}`);
-        [code, stdout, stderr] = await Win_RunPowershell(psScript);
-        if (code !== 0) {
-            // PowerShell's exception is not passed to Deno's exception. Search for the errors in the output and
-            // handle as necessary.
-            if (stderr.match(/Access is denied/)) {
-                logger.warning(`(Win_SetRegistry) Error setting the registry value`);
+            return {value: execResult.stdout ?? "Undefined"};
+        })
+        .catch((err: unknown): Result => {
+            if (err instanceof Deno.errors.PermissionDenied) {
                 logger.warning(`(Win_SetRegistry) This script needs to be run with Administrator permission`);
-                logger.warning(`(Win_SetRegistry) stderr:`, stderr);
-            } else if (stderr.match(/Requested registry access is not allowed/)) {
-                logger.warning(`(Win_SetRegistry) Error setting the registry value`);
-                logger.warning(`(Win_SetRegistry) This script needs to be run with Administrator permission`);
-                logger.warning(`(Win_SetRegistry) stderr:`, stderr);
-            } else {
-                logger.warning(`(Win_SetRegistry) return code:`, code);
-                logger.warning(`(Win_SetRegistry) stdout:`, stdout);
-                logger.warning(`(Win_SetRegistry) stderr:`, stderr);
             }
-        }
-    } catch (err: unknown) {
-        if (err instanceof Deno.errors.PermissionDenied) {
-            logger.warning(`(Win_SetRegistry) Error setting the registry value`);
-            logger.warning(`(Win_SetRegistry) This script needs to be run with Administrator permission`);
-            logger.warning(`(Win_SetRegistry) err:`, err);
-        } else {
-            logger.error(`(Win_SetRegistry) Error setting the registry value`);
-            logger.error(`(Win_SetRegistry) stderr:`, stderr);
-            logger.error(`(Win_SetRegistry) err:`, err);
-            throw err;
-        }
-    }
-
+            logger.error(`(Win_GetRegistryKey) Error Setting the registry value`);
+            logger.error(`(Win_GetRegistryKey) err:`, err);
+            // throw err;
+            return {err: err};
+        });
 }

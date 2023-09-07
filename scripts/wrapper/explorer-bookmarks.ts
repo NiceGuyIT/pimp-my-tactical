@@ -1,103 +1,31 @@
-import * as path from "https://deno.land/std@0.198.0/path/mod.ts";
-import * as fmt from "https://deno.land/std@0.198.0/fmt/printf.ts";
-import * as colors from "https://deno.land/std@0.198.0/fmt/colors.ts";
-import * as datetime from "https://deno.land/std@0.198.0/datetime/mod.ts";
-import * as log from "https://deno.land/std@0.198.0/log/mod.ts";
+import * as path from "https://deno.land/std@0.201.0/path/mod.ts";
+import * as colors from "https://deno.land/std@0.201.0/fmt/colors.ts";
+import * as datetime from "https://deno.land/std@0.201.0/datetime/mod.ts";
+import * as log from "https://deno.land/std@0.201.0/log/mod.ts";
+// import * as tslib from "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/develop/scripts/ts-lib/mod.ts";
+import * as tslib from "../ts-lib/mod.ts";
 
 /**
- * EB_LOG_LEVEL is the log level of the script.
- * Default: Verbose
- * @see https://deno.land/std@0.198.0/log/mod.ts
+ * Configure the logging system.
  */
-// FIXME: This can be improved.
-let levelName: log.LevelName;
-switch ((Deno.env.get("EB_LOG_LEVEL") ?? "").toUpperCase()) {
-	case "NOTSET":
-		levelName = "NOTSET";
-		break;
-	case "DEBUG":
-		levelName = "DEBUG";
-		break;
-	case "INFO":
-		levelName = "INFO";
-		break;
-	case "WARNING":
-		levelName = "WARNING";
-		break;
-	case "ERROR":
-		levelName = "ERROR";
-		break;
-	case "CRITICAL":
-		levelName = "CRITICAL";
-		break;
-	default:
-		levelName = "WARNING";
-		break;
-}
-
-log.setup({
-	// Define handlers
-	handlers: {
-		console: new log.handlers.ConsoleHandler("DEBUG", {
-			formatter: (logRecord) => {
-				const timestamp = datetime.format(logRecord.datetime, "HH:mm:ss.SSS");
-				let msg = `${timestamp} [${logRecord.levelName}] ${logRecord.msg}`;
-				logRecord.args.forEach((arg) => {
-					switch (typeof (arg)) {
-						case "undefined":
-							msg += " {undefined}";
-							break;
-						case "object":
-							msg += fmt.sprintf(" %i", arg);
-							break;
-						default:
-							msg += fmt.sprintf(" {%v}", arg);
-					}
-				});
-				return msg;
-			},
-		}),
-		file: new log.handlers.FileHandler("DEBUG", {
-			// TODO: Make the log file dynamic
-			filename: (Deno.env.get("USERPROFILE") ?? "").match(/systemprofile$/)
-				? "C:\\ProgramData\\TacticalRMM\\Explorer-Bookmarks.log"
-				: path.join(Deno.env.get("USERPROFILE") ?? "", `\\Documents\\Explorer-Bookmarks\\Explorer-Bookmarks.log`),
-			formatter: (logRecord) => {
-				const timestamp = datetime.format(logRecord.datetime, "HH:mm:ss.SSS");
-				let msg = `${timestamp} [${logRecord.levelName}] ${logRecord.msg}`;
-				logRecord.args.forEach((arg) => {
-					switch (typeof (arg)) {
-						case "undefined":
-							msg += " {undefined}";
-							break;
-						case "object":
-							msg += fmt.sprintf(" %i", arg);
-							break;
-						default:
-							msg += fmt.sprintf(" {%v}", arg);
-					}
-				});
-				return msg;
-			},
-		}),
-	},
-	// Assign handlers to loggers
-	loggers: {
-		default: {
-			handlers: ["console", "file"],
-			level: levelName,
-		}
-	}
-});
+log.setup(tslib.MyLogConfig);
 const logger = log.getLogger();
 
-/**
- * Disable color logging
- */
-if (colors.getColorEnabled()) {
-	colors.setColorEnabled(false);
+// Are we developers?
+const dev = true;
+
+if (dev) {
+    // Enable color logging
+    if (!colors.getColorEnabled()) {
+        colors.setColorEnabled(true);
+    }
+    logger.debug(`(main) Color enabled:`, colors.getColorEnabled());
+} else {
+    // Disable color logging
+    if (colors.getColorEnabled()) {
+        colors.setColorEnabled(false);
+    }
 }
-logger.debug(`(main) Color enabled:`, colors.getColorEnabled());
 
 /**
  * Bookmarks config definition

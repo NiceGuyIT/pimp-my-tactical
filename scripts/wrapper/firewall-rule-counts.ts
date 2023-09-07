@@ -1,8 +1,8 @@
-import * as colors from "https://deno.land/std@0.200.0/fmt/colors.ts";
-import * as log from "https://deno.land/std@0.200.0/log/mod.ts";
+import * as colors from "https://deno.land/std@0.201.0/fmt/colors.ts";
+import * as log from "https://deno.land/std@0.201.0/log/mod.ts";
 import AsciiTable, {AsciiAlign} from "https://deno.land/x/ascii_table@v0.1.0/mod.ts";
-import * as utils from "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/main/scripts/ts-lib/mod.ts";
-import {NetFirewallRule, NetFirewallPortFilter} from "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/main/scripts/ts-lib/microsoft.d.ts";
+import * as tslib from "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/develop/scripts/ts-lib/mod.ts";
+import {NetFirewallRule, NetFirewallPortFilter} from "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/develop/scripts/ts-lib/microsoft.d.ts";
 
 /**
  * JSON to JSON Schema: https://transform.tools/json-to-json-schema
@@ -11,9 +11,18 @@ import {NetFirewallRule, NetFirewallPortFilter} from "https://raw.githubusercont
  */
 
 /**
+ * To convert enum to string, use the following:
+ * [enum]::GetNames([Microsoft.PowerShell.Cmdletization.GeneratedTypes.NetSecurity.Profile]) |
+ * foreach {
+ * 		$num = [Microsoft.PowerShell.Cmdletization.GeneratedTypes.NetSecurity.Profile]::$_.value__;
+ * 		Write-Host ("${num} - ${_}");
+ * }
+ */
+
+/**
  * Configure the logging system.
  */
-log.setup(utils.MyLogConfig);
+log.setup(tslib.MyLogConfig);
 const logger = log.getLogger();
 
 // Are we developers?
@@ -30,7 +39,6 @@ if (dev) {
 	if (colors.getColorEnabled()) {
 		colors.setColorEnabled(false);
 	}
-
 }
 
 /**
@@ -56,110 +64,29 @@ type FirewallPort = {
 	LocalPort: string;
 }
 
-/**
- * Get the firewall rules
- * @param {string} displayName - The DisplayName argument to Get-NetFirewallRule
- * @returns {NetFirewallRule[]} - The firewall rules
- */
-async function getFirewallRules(displayName?: string): Promise<NetFirewallRule[]> {
-	let psScript = `Get-NetFirewallRule | ConvertTo-Json -Compress;`;
-	if (displayName !== undefined && displayName) {
-		psScript = `Get-NetFirewallRule -DisplayName "${displayName}" | ConvertTo-Json -Compress;`;
-	}
-
-	let code = 0;
-	let stdout = "";
-	let stderr = "";
-	try {
-		logger.info(`(getFirewallRules) Running Get-NetFirewallRule`);
-		[code, stdout, stderr] = await utils.Win_RunPowershell(psScript);
-		if (code !== 0) {
-			// PowerShell's exception is not passed to Deno's exception. Search for the errors in the output and
-			// handle as necessary.
-			if (stderr.match(/Access is denied/)) {
-				logger.warning(`(getFirewallRules) Error getting the firewall rules`);
-				logger.warning(`(getFirewallRules) This script needs to be run with Administrator permission`);
-				logger.warning(`(getFirewallRules) stderr:`, stderr);
-				/*
-				} else if (stderr.match(/Requested registry access is not allowed/)) {
-					logger.warning(`(getFirewallRules) Error getting the firewall rules`);
-					logger.warning(`(getFirewallRules) This script needs to be run with Administrator permission`);
-					logger.warning(`(getFirewallRules) stderr:`, stderr);
-				*/
-			} else {
-				logger.warning(`(getFirewallRules) return code:`, code);
-				logger.warning(`(getFirewallRules) stdout:`, stdout);
-				logger.warning(`(getFirewallRules) stderr:`, stderr);
-			}
-		}
-	} catch (err: unknown) {
-		if (err instanceof Deno.errors.PermissionDenied) {
-			logger.warning(`(getFirewallRules) Error getting the firewall rules`);
-			logger.warning(`(getFirewallRules) This script needs to be run with Administrator permission`);
-			logger.warning(`(getFirewallRules) err:`, err);
-		} else {
-			logger.error(`(getFirewallRules) Error getting the firewall rules`);
-			logger.error(`(getFirewallRules) stderr:`, stderr);
-			logger.error(`(getFirewallRules) err:`, err);
-			throw err;
-		}
-	}
-
-	logger.info(`(getFirewallRules) Done running Get-NetFirewallRule`);
-	return <NetFirewallRule[]>JSON.parse(stdout);
-}
-
-/**
- * Get the firewall ports
- * @returns {NetFirewallPortFilter[]} - The firewall ports
- */
-async function getFirewallPorts(): Promise<NetFirewallPortFilter[]> {
-	const psScript = `Get-NetFirewallPortFilter | ConvertTo-Json -Compress;`;
-
-	let code = 0;
-	let stdout = "";
-	let stderr = "";
-	try {
-		logger.info(`(getFirewallRules) Running Get-NetFirewallPortFilter`);
-		[code, stdout, stderr] = await utils.Win_RunPowershell(psScript);
-		if (code !== 0) {
-			// PowerShell's exception is not passed to Deno's exception. Search for the errors in the output and
-			// handle as necessary.
-			if (stderr.match(/Access is denied/)) {
-				logger.warning(`(getFirewallPorts) Error getting the firewall port filters`);
-				logger.warning(`(getFirewallPorts) This script needs to be run with Administrator permission`);
-				logger.warning(`(getFirewallPorts) stderr:`, stderr);
-				/*
-				} else if (stderr.match(/Requested registry access is not allowed/)) {
-					logger.warning(`(getFirewallPorts) Error getting the firewall port filters`);
-					logger.warning(`(getFirewallPorts) This script needs to be run with Administrator permission`);
-					logger.warning(`(getFirewallPorts) stderr:`, stderr);
-				*/
-			} else {
-				logger.warning(`(getFirewallPorts) return code:`, code);
-				logger.warning(`(getFirewallPorts) stdout:`, stdout);
-				logger.warning(`(getFirewallPorts) stderr:`, stderr);
-			}
-		}
-	} catch (err: unknown) {
-		if (err instanceof Deno.errors.PermissionDenied) {
-			logger.warning(`(getFirewallPorts) Error getting the firewall port filters`);
-			logger.warning(`(getFirewallPorts) This script needs to be run with Administrator permission`);
-			logger.warning(`(getFirewallPorts) err:`, err);
-		} else {
-			logger.error(`(getFirewallPorts) Error getting the firewall port filters`);
-			logger.error(`(getFirewallPorts) stderr:`, stderr);
-			logger.error(`(getFirewallPorts) err:`, err);
-			throw err;
-		}
-	}
-
-	logger.info(`(getFirewallRules) Done running Get-NetFirewallPortFilter`);
-	return <NetFirewallPortFilter[]>JSON.parse(stdout);
-}
-
 logger.debug(`(main) Starting`);
-const rules = await getFirewallRules();
+let rules: NetFirewallRule[] = []
+logger.debug(`(main) Getting firewall rules`);
+const rulesResult = await tslib.Win_RunPowershell(`Get-NetFirewallRule | ConvertTo-Json -Compress`);
+if ("err" in rulesResult) {
+	logger.error(`(main) Error getting the firewall rules:`, rulesResult.err);
+	throw rulesResult.err;
+} else if ("stdout" in rulesResult) {
+	logger.debug(`(main) Done getting firewall rules`);
+	rules = <NetFirewallRule[]>JSON.parse(rulesResult.stdout ?? "");
+}
+
+let ports: NetFirewallPortFilter[] = []
+logger.debug(`(main) Getting firewall ports`);
+const portsResult = await tslib.Win_RunPowershell(`Get-NetFirewallRule | ConvertTo-Json -Compress`);
+if ("err" in portsResult) {
+	logger.error(`(main) Error getting the firewall rules:`, portsResult.err);
+	throw portsResult.err;
+} else if ("stdout" in portsResult) {
+	ports = <NetFirewallPortFilter[]>JSON.parse(portsResult.stdout ?? "");
+	logger.debug(`(main) Done getting firewall ports`);
+}
+
 const firewallRuleMap: FirewallRuleMap = {};
 rules.forEach((rule: NetFirewallRule) => {
 	if (rule.InstanceID in firewallRuleMap) {
@@ -180,7 +107,6 @@ rules.forEach((rule: NetFirewallRule) => {
 	}
 });
 
-const ports = await getFirewallPorts();
 ports.forEach((port: NetFirewallPortFilter) => {
 	if (port.InstanceID in firewallRuleMap) {
 		// Item exists. Add port information

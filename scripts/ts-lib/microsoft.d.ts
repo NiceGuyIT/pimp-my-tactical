@@ -1,8 +1,4 @@
 /**
- * A collection of Microsoft specific interfaces to consume ConvertTo-Json output.
- */
-
-/**
  * Get-NetFirewallRule | ConvertTo-Json
  */
 interface NetFirewallRule {
@@ -170,7 +166,7 @@ interface ItemPropertyRegistry {
  * @property {object} PSProvider
  * @property {boolean} PSIsContainer
  */
-interface ItemRegistry {
+type ItemRegistry = {
     SubKeyCount: number;
     View: number;
     Handle: Handle;
