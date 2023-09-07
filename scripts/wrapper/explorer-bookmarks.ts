@@ -698,7 +698,7 @@ async function installScript() {
 		"compile",
 		"--no-prompt",
 	];
-	if (levelName !== "DEBUG") {
+	if (logger.levelName !== "DEBUG") {
 		// Hide the terminal also hides critical errors. Only hide it if not debugging.
 		args.push("--no-terminal");
 	}
@@ -1094,7 +1094,7 @@ const _isInteractiveShell = testIsInteractiveShell();
 let returnCode = 0;
 
 processConfig();
-if (levelName === "DEBUG") {
+if (logger.levelName === "DEBUG") {
 	// Dump the config when debugging.
 	dumpConfig();
 }
