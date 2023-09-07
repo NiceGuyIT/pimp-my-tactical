@@ -1,0 +1,36 @@
+/* ==UserStyle==
+@name			TacticalRMM Automation Manager
+@namespace		github.com/NiceGuyIT/pimp-my-tactical/tree/main/user-css
+@version		1.0.0
+@description	TacticalRMM user styles to expand the automation manager windows to fit environmental variables better.
+@author			NiceGuyIT
+==/UserStyle== */
+
+
+@-moz-document regexp("https://rmm\\..*") {
+
+	/* Editing Automated Task window */
+	body > div:nth-child(5) > .q-dialog > .q-dialog__inner > div.q-card {
+		min-width: 95vw !important;
+	}
+
+	/* Script fields in the Configure Actions section of the Editing Automated Task window */
+	body > div:nth-child(5) > .q-dialog > .q-dialog__inner > div.q-card > .q-stepper > .q-stepper__content > .q-panel > .q-stepper__step > .q-stepper__step-content > .q-stepper__step-inner > form.q-form > div.row > label:nth-child(3) {
+		background: DarkBlue;
+		width: 30%;
+	}
+	body > div:nth-child(5) > .q-dialog > .q-dialog__inner > div.q-card > .q-stepper > .q-stepper__content > .q-panel > .q-stepper__step > .q-stepper__step-content > .q-stepper__step-inner > form.q-form > div.row > label:nth-child(4) {
+		background: DarkBlue;
+		width: 50%;
+	}
+	body > div:nth-child(5) > .q-dialog > .q-dialog__inner > div.q-card > .q-stepper > .q-stepper__content > .q-panel > .q-stepper__step > .q-stepper__step-content > .q-stepper__step-inner > form.q-form > div.row > label:nth-child(5) {
+		background: RebeccaPurple;
+		width: auto;
+		margin-top: 0.5rem;
+		margin-bottom: 0.5rem;
+	}
+	body > div:nth-child(5) > .q-dialog > .q-dialog__inner > div.q-card > .q-stepper > .q-stepper__content > .q-panel > .q-stepper__step > .q-stepper__step-content > .q-stepper__step-inner > form.q-form > div.row > label:nth-child(6) {
+		background: DarkBlue;
+		width: 10%;
+	}
+}

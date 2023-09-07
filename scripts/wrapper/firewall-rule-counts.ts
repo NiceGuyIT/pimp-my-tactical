@@ -1,8 +1,8 @@
 import * as colors from "https://deno.land/std@0.201.0/fmt/colors.ts";
 import * as log from "https://deno.land/std@0.201.0/log/mod.ts";
 import AsciiTable, {AsciiAlign} from "https://deno.land/x/ascii_table@v0.1.0/mod.ts";
-import * as tslib from "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/develop/scripts/ts-lib/mod.ts";
-import {NetFirewallRule, NetFirewallPortFilter} from "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/develop/scripts/ts-lib/microsoft.d.ts";
+import * as tslib from "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/v0.0.7/scripts/ts-lib/mod.ts";
+import {NetFirewallRule, NetFirewallPortFilter} from "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/v0.0.7/scripts/ts-lib/microsoft.d.ts";
 
 /**
  * JSON to JSON Schema: https://transform.tools/json-to-json-schema
