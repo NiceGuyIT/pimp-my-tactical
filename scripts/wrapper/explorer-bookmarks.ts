@@ -1007,7 +1007,14 @@ Deno permissions
 	console.log(help);
 }
 
-const isAdmin = await tslib.TestIsAdmin();
+const isAdminResult = await tslib.TestIsAdmin();
+let isAdmin = false;
+if ("err" in isAdminResult && isAdminResult.err) {
+	logger.warning(`(main) isAdminResult.err:`, isAdminResult.err);
+}
+if ("value" in isAdminResult && typeof isAdminResult.value === "boolean") {
+	isAdmin = <boolean>isAdminResult.value;
+}
 logger.debug(`(main) isAdmin: ${isAdmin}`);
 let returnCode = 0;
 
