@@ -2,7 +2,7 @@ import * as path from "https://deno.land/std@0.201.0/path/mod.ts";
 import * as colors from "https://deno.land/std@0.201.0/fmt/colors.ts";
 import * as datetime from "https://deno.land/std@0.201.0/datetime/mod.ts";
 import * as log from "https://deno.land/std@0.201.0/log/mod.ts";
-import * as tslib from "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/v0.0.7/scripts/ts-lib/mod.ts";
+import * as tslib from "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/v0.0.8/scripts/ts-lib/mod.ts";
 // import * as tslib from "../ts-lib/mod.ts";
 
 /**
@@ -857,86 +857,6 @@ async function openExplorerBookmarks(bookmarkFile: string) {
 }
 
 /**
- * testIsAdmin will return true if the current user is an administrator.
- * For Windows:
- *   "Mandatory Label\High Mandatory Level" is when the script is run from an elevated session.
- *   "Mandatory Label\System Mandatory Level" is when the script is run from SYSTEM.
- * @constructor
- */
-async function testIsAdmin() {
-	let cmd: string;
-	let args: string[] = [];
-	if (Deno.build.os === "windows") {
-		cmd = "C:/Windows/System32/whoami.exe";
-		args = [
-			"/groups",
-		];
-	} else {
-		cmd = "/usr/bin/whoami";
-	}
-
-	let stdoutText = "";
-	let stderrText = "";
-	let commandOutput: Deno.CommandOutput;
-	try {
-		const command = new Deno.Command(cmd, {
-			args: args,
-		});
-		commandOutput = await command.output();
-		stdoutText = new TextDecoder().decode(commandOutput.stdout);
-		stderrText = new TextDecoder().decode(commandOutput.stderr);
-	} catch (err) {
-		logger.error(`(testIsAdmin) Error executing command:`, cmd);
-		logger.error(`(testIsAdmin) err:`, err);
-		logger.error(`(testIsAdmin) stdout:`, stdoutText);
-		logger.error(`(testIsAdmin) stderr:`, stderrText);
-		throw err;
-	}
-
-	// Capture any errors
-	if ((commandOutput.code !== 0) || (!commandOutput.success)) {
-		logger.error(`(testIsAdmin) Error executing command '${cmd}'`);
-		logger.error(`(testIsAdmin) Return code:`, commandOutput.code);
-		logger.error(`(testIsAdmin) Success:`, commandOutput.success);
-		logger.error(`(testIsAdmin) stdout:\n`, stdoutText);
-		logger.error(`(testIsAdmin) stderr:\n`, stderrText);
-		throw stderrText;
-	}
-
-	// Process the output
-	if (Deno.build.os === "windows") {
-		logger.debug(`(testIsAdmin) includes 'Mandatory Label\\High Mandatory Level':`, stdoutText.includes("Mandatory Label\\High Mandatory Level"));
-		logger.debug(`(testIsAdmin) includes 'Mandatory Label\\System Mandatory Level':`, stdoutText.includes("Mandatory Label\\System Mandatory Level"));
-		if (stdoutText.includes("Mandatory Label\\High Mandatory Level") ||
-			stdoutText.includes("Mandatory Label\\System Mandatory Level")) {
-			logger.debug(`(testIsAdmin) isAdmin:`, true);
-			return true;
-		} else {
-			logger.debug(`(testIsAdmin) isAdmin:`, false);
-			return false;
-		}
-	} else {
-		logger.debug(`(testIsAdmin) includes 'root':`, stdoutText.includes("root"));
-		return (stdoutText.includes("root"));
-	}
-}
-
-/**
- * TestIsInterativeShell will return true if the program is being run interactively.
- * For Linux/macOS:
- *   This checks if stdin is a terminal.
- * For Windows:
- *   This checks if PowerShell was run with the -NonInteractive switch.
- *   @See https://stackoverflow.com/questions/9738535/powershell-test-for-noninteractive-mode
- * @constructor
- */
-function testIsInteractiveShell() {
-	logger.debug(`(testIsInteractiveShell) isATTY STDIN:`, Deno.isatty(Deno.stdin.rid));
-	logger.debug(`(testIsInteractiveShell) isATTY STDOUT:`, Deno.isatty(Deno.stdout.rid));
-	return Deno.isatty(Deno.stdin.rid);
-}
-
-/**
  * powershell will run the script in powershell and return stdout, stderr and the return code.
  * FIXME: PowerShell's try/catch doesn't work 99% of the time because the error is not a terminating error.
  * TODO: Add '-ErrorAction Stop' to PS scripts to catch the exception and handle it.
@@ -1042,10 +962,10 @@ function spawn(cmd: string, args: string[]) {
 }
 
 /**
- * GetHelp will print the help message.
+ * getHelp will print the help message.
  * @constructor
  */
-function GetHelp() {
+function getHelp() {
 	const help = `Explorer Bookmarks will "bookmark" the open Explorer windows.
 
 Usage:
@@ -1087,10 +1007,8 @@ Deno permissions
 	console.log(help);
 }
 
-const isAdmin = await testIsAdmin();
+const isAdmin = await tslib.TestIsAdmin();
 logger.debug(`(main) isAdmin: ${isAdmin}`);
-// Test for interactivity is not needed because Deno doesn't close the shell like PowerShell does.
-const _isInteractiveShell = testIsInteractiveShell();
 let returnCode = 0;
 
 processConfig();
@@ -1160,13 +1078,13 @@ if (Deno.env.has("EB_ACTION")) {
 			break;
 
 		case "help": {
-			GetHelp();
+			getHelp();
 		}
 			break;
 
 		default: {
 			logger.error(`(main) Invalid action: '${Deno.env.get("EB_ACTION")?.toLowerCase()}'`);
-			GetHelp();
+			getHelp();
 			returnCode = 1;
 		}
 			break;
@@ -1176,8 +1094,14 @@ if (Deno.env.has("EB_ACTION")) {
 	switch (Deno.args.length) {
 		case 0: {
 			if (isAdmin) {
-				logger.warning(`(main) This script should not be run as an administrator.`);
-				returnCode = 1;
+				// TacticalRMM's RunAsUser functionality will work only if a session is active.
+				// If 'query.exe session' does not show an active session, the user is not logged in.
+				// This happens if you connect via RDP and then disconnect. The login session is there but not active.
+				// Logging in through MeshCentral will start the session on the console, and disconnecting MeshCentral
+				// will leave the console session active.
+				// For this reason, we don't set the return code as failure.
+				// @see https://docs.tacticalrmm.com/howitallworks/#runasuser-functionality
+				logger.info(`(main) Session is not active for RunAsUser functionality.`);
 				break;
 			}
 
@@ -1222,7 +1146,7 @@ if (Deno.env.has("EB_ACTION")) {
 					break;
 
 				case "help": {
-					GetHelp();
+					getHelp();
 				}
 					break;
 
@@ -1238,7 +1162,7 @@ if (Deno.env.has("EB_ACTION")) {
 
 		default: {
 			logger.error(`(main) Wrong number of arguments: '${Deno.args.length}'`);
-			GetHelp();
+			getHelp();
 			returnCode = 1;
 		}
 	}

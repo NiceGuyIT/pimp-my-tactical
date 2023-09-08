@@ -31,32 +31,32 @@ export const MyLogConfig: log.LogConfig = {
             },
         }),
         /*
-        // See https://github.com/NiceGuyIT/pimp-my-tactical/blob/main/scripts/wrapper/explorer-bookmarks.ts for an
-        // example of file handler.
-        file: new log.handlers.FileHandler("DEBUG", {
-            // TODO: Make the log file dynamic
-            filename: (Deno.env.get("USERPROFILE") ?? "").match(/systemprofile$/)
-                ? "C:\\ProgramData\\TacticalRMM\\Explorer-Bookmarks.log"
-                : path.join(Deno.env.get("USERPROFILE") ?? "", `\\Documents\\Explorer-Bookmarks\\Explorer-Bookmarks.log`),
-            formatter: (logRecord) => {
-                const timestamp = datetime.format(logRecord.datetime, "HH:mm:ss.SSS");
-                let msg = `${timestamp} [${logRecord.levelName}] ${logRecord.msg}`;
-                logRecord.args.forEach((arg) => {
-                    switch (typeof (arg)) {
-                        case "undefined":
-                            msg += " {undefined}";
-                            break;
-                        case "object":
-                            msg += fmt.sprintf(" %i", arg);
-                            break;
-                        default:
-                            msg += fmt.sprintf(" {%v}", arg);
-                    }
-                });
-                return msg;
-            },
-        }),
-         */
+		// See https://github.com/NiceGuyIT/pimp-my-tactical/blob/main/scripts/wrapper/explorer-bookmarks.ts for an
+		// example of file handler.
+		file: new log.handlers.FileHandler("DEBUG", {
+			// TODO: Make the log file dynamic
+			filename: (Deno.env.get("USERPROFILE") ?? "").match(/systemprofile$/)
+				? "C:\\ProgramData\\TacticalRMM\\Explorer-Bookmarks.log"
+				: path.join(Deno.env.get("USERPROFILE") ?? "", `\\Documents\\Explorer-Bookmarks\\Explorer-Bookmarks.log`),
+			formatter: (logRecord) => {
+				const timestamp = datetime.format(logRecord.datetime, "HH:mm:ss.SSS");
+				let msg = `${timestamp} [${logRecord.levelName}] ${logRecord.msg}`;
+				logRecord.args.forEach((arg) => {
+					switch (typeof (arg)) {
+						case "undefined":
+							msg += " {undefined}";
+							break;
+						case "object":
+							msg += fmt.sprintf(" %i", arg);
+							break;
+						default:
+							msg += fmt.sprintf(" {%v}", arg);
+					}
+				});
+				return msg;
+			},
+		}),
+		 */
     },
     // Assign handlers to loggers
     loggers: {
@@ -73,7 +73,7 @@ export const MyLogConfig: log.LogConfig = {
  * TODO: This may change once I learn how to throw an error in a Promise.
  */
 export interface Result {
-    value?: string | string[] | number;
+    value?: string | string[] | number | boolean;
     err?: Error | unknown;
 }
 
@@ -331,4 +331,120 @@ export async function Win_SetRegistryValue(
             // throw err;
             return {err: err};
         });
+}
+
+/**
+ * Exec will run the command with the supplied arguments and pass back the results in the ExecResult object.
+ * @param cmd
+ * @param args
+ * @constructor */
+export async function Exec(cmd: string, args: string[]): Promise<ExecResult> {
+    const logger = log.getLogger();
+
+    logger.debug(`(Exec) Running command:`, cmd);
+    logger.debug(`(Exec) Args:`, args);
+    return await (new Deno.Command(cmd, {
+        args: args,
+        stdout: "piped",
+        stderr: "piped",
+    })
+        .output()
+        .then(commandOutput => {
+            // logger.debug(`(Exec) stdout:`, execResult.stdout);
+            return <ExecResult>{
+                returnCode: commandOutput.code,
+                stdout: new TextDecoder().decode(commandOutput.stdout),
+                stderr: new TextDecoder().decode(commandOutput.stderr),
+            }
+        })
+        .catch(err => {
+            logger.error(`(Exec) Error executing command:`, cmd);
+            logger.error(`(Exec) err:`, err);
+            return <ExecResult>{
+                returnCode: err.code,
+                stdout: err.message,
+            };
+        }));
+}
+
+/**
+ * TestIsAdmin will return true if the current user is an administrator.
+ * For Windows:
+ *   "Mandatory Label\High Mandatory Level" is when the script is run from an elevated session.
+ *   "Mandatory Label\System Mandatory Level" is when the script is run from SYSTEM.
+ * @constructor
+ */
+export async function TestIsAdmin() {
+    const logger = log.getLogger();
+    let cmd: string;
+    let args: string[] = [];
+    if (Deno.build.os === "windows") {
+        cmd = "C:/Windows/System32/whoami.exe";
+        args = [
+            "/groups",
+        ];
+    } else {
+        cmd = "/usr/bin/whoami";
+    }
+
+    return await Exec(cmd, args)
+        .then((execResult: ExecResult): Result => {
+            if (execResult.returnCode !== 0) {
+                logger.warning(`(TestIsAdmin) Code: return code:`, execResult.returnCode);
+                logger.warning(`(TestIsAdmin) Code: stdout:`, execResult.stdout ?? "Undefined");
+                logger.warning(`(TestIsAdmin) Code: stderr:`, execResult.stderr ?? "Undefined");
+                return <Result>{
+                    err: Error(execResult.stderr)
+                };
+            } else if (execResult.stderr !== "") {
+                logger.warning(`(TestIsAdmin) STDERR: return code:`, execResult.returnCode);
+                logger.warning(`(TestIsAdmin) STDERR: stdout:`, execResult.stdout ?? "Undefined");
+                logger.warning(`(TestIsAdmin) STDERR: stderr:`, execResult.stderr ?? "Undefined");
+                return <Result>{
+                    err: Error(execResult.stderr ?? "Undefined")
+                };
+            }
+
+            // Process the output
+            if (Deno.build.os === "windows") {
+                logger.debug(`(TestIsAdmin) includes 'Mandatory Label\\High Mandatory Level':`, execResult.stdout?.includes("Mandatory Label\\High Mandatory Level"));
+                logger.debug(`(TestIsAdmin) includes 'Mandatory Label\\System Mandatory Level':`, execResult.stdout?.includes("Mandatory Label\\System Mandatory Level"));
+                if (execResult.stdout?.includes("Mandatory Label\\High Mandatory Level") ||
+                    execResult.stdout?.includes("Mandatory Label\\System Mandatory Level")) {
+                    logger.info(`(TestIsAdmin) isAdmin:`, true);
+                    return <Result>{
+                        value: true
+                    };
+                } else {
+                    logger.info(`(TestIsAdmin) isAdmin:`, false);
+                    return <Result>{
+                        value: false
+                    };
+                }
+            } else {
+                logger.info(`(testIsAdmin) includes 'root':`, execResult.stdout?.includes("root"));
+                return <Result>{
+                    value: execResult.stdout?.includes("root")
+                };
+            }
+
+        })
+        .catch((err: unknown): Result => {
+            logger.error(`(TestIsAdmin) Error getting the registry key`);
+            logger.error(`(TestIsAdmin) err:`, err);
+            // throw err;
+            return <Result>{err: err};
+        });
+
+}
+
+/**
+ * TestIsInteractiveShell will return true if the program is being run interactively by checking if stdin is a TTY.
+ * @constructor
+ */
+export function TestIsInteractiveShell() {
+    const logger = log.getLogger();
+    logger.debug(`(TestIsInteractiveShell) isATTY STDIN:`, Deno.isatty(Deno.stdin.rid));
+    logger.debug(`(TestIsInteractiveShell) isATTY STDOUT:`, Deno.isatty(Deno.stdout.rid));
+    return Deno.isatty(Deno.stdin.rid);
 }

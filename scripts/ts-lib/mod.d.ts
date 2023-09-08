@@ -18,6 +18,12 @@ declare namespace TSLib {
 		regPropertyValue: string | number
 	): Promise<void>;
 
+	export async function Exec(cmd: string, args: string[]): Promise<Result>;
+
+	export async function TestIsAdmin(): Promise<Result>;
+
+	export function TestIsInteractiveShell(): boolean;
+
 	/**
 	 * Interface for functions that return a result.
 	 * TODO: This may change once I learn how to throw an error in a Promise.
