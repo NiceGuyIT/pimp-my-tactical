@@ -1,7 +1,7 @@
 /* ==UserStyle==
 @name			TacticalRMM Script Manager
 @namespace		github.com/NiceGuyIT/pimp-my-tactical/tree/main/user-css
-@version		1.0.2
+@version		1.0.3
 @description	TacticalRMM user styles to expand the environmental variable section in Script Manager.
 @author			NiceGuyIT
 ==/UserStyle== */
@@ -13,8 +13,15 @@
 	body > div:nth-child(5) > .q-dialog > .q-dialog__inner > .q-card > .q-form > .row > .q-scrollarea {
 		width: 65%;
 	}
-
 	body > div:nth-child(5) > .q-dialog > .q-dialog__inner > .q-card > .q-form > .row > .ace_editor {
+		width: 35%;
+	}
+	/* Sometimes other elements like Stylus will be inserted higher up in the BODY than the DIV we want. */
+	/* This will match when there are 2 extra elements. */
+	body > div:nth-child(7) > .q-dialog > .q-dialog__inner > .q-card > .q-form > .row > .q-scrollarea {
+		width: 65%;
+	}
+	body > div:nth-child(7) > .q-dialog > .q-dialog__inner > .q-card > .q-form > .row > .ace_editor {
 		width: 35%;
 	}
 
@@ -25,5 +32,13 @@
 	body > div:nth-child(5) > .q-dialog > .q-dialog__inner > .q-card > .q-form > .row > .q-scrollarea > .q-scrollarea__container > .q-scrollarea__content > div > label:nth-child(10) > .q-field__inner > .q-field__control > div.row > textarea {
 		height: 275px !important;
 	}
-}
+	/* Sometimes other elements like Stylus will be inserted higher up in the BODY than the DIV we want. */
+	/* This will match when there are 2 extra elements. */
+	body > div:nth-child(7) > .q-dialog > .q-dialog__inner > .q-card > .q-form > .row > .q-scrollarea > .q-scrollarea__container > .q-scrollarea__content > div > label:nth-child(10) {
+		height: auto !important;
+	}
+	body > div:nth-child(7) > .q-dialog > .q-dialog__inner > .q-card > .q-form > .row > .q-scrollarea > .q-scrollarea__container > .q-scrollarea__content > div > label:nth-child(10) > .q-field__inner > .q-field__control > div.row > textarea {
+		height: 275px !important;
+	}
 
+}
