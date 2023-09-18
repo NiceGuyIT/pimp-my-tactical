@@ -11,18 +11,19 @@
 
 	/* Adjust the width of the script editor for better visibility of environmental variables. */
 	body > div:nth-child(5) > .q-dialog > .q-dialog__inner > .q-card > .q-form > .row > .q-scrollarea {
-		width: 65%;
+		width: 50%;
 	}
+
 	body > div:nth-child(5) > .q-dialog > .q-dialog__inner > .q-card > .q-form > .row > .ace_editor {
-		width: 35%;
+		width: 50%;
 	}
 	/* Sometimes other elements like Stylus will be inserted higher up in the BODY than the DIV we want. */
 	/* This will match when there are 2 extra elements. */
 	body > div:nth-child(7) > .q-dialog > .q-dialog__inner > .q-card > .q-form > .row > .q-scrollarea {
-		width: 65%;
+		width: 50%;
 	}
 	body > div:nth-child(7) > .q-dialog > .q-dialog__inner > .q-card > .q-form > .row > .ace_editor {
-		width: 35%;
+		width: 50%;
 	}
 
 	/* Increase the height of the syntax box. This is where the environmental variables are stored and can be edited before pasting into the environmental box. */
