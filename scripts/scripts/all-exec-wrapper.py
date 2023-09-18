@@ -1,14 +1,60 @@
+# The layout of scripts is as follows:
+#   shebang (below)
+#   Variable declarations
+#   Script snippet (below)
+
+############################## ><8 Begin shebang 8>< ##############################
+# This will run RustPython on Linux/macOS. Windows uses TacticalRMM's Python distribution.
 #!/opt/exec-wrapper/bin/rustpython
+
+############################## ><8 Begin variable declarations (docs) 8>< ##############################
+# Variable declarations
+# There are 4 types of variables:
+#   1. Exec wrapper - Prefixed with 'WRAPPER_', these alter the behavior of the exec wrapper.
+#   2. Executable - Prefixed with "EXEC_" and the name of the executable, these alter the behavior of the executable.
+#      "EXEC_" is used to prevent mixing with executable environmental variables. For example,
+#   3. Language - Prefixed with the name of the (abbreviated) language, these alter the behavior of the language.
+#   4. Script - prefixed with the name of the script, these alter the behavior of the script.
+#
+# Supported variables:
+#   WRAPPER_BINARY - Binary to be executed. One of 'deno', 'nushell', 'rustpython'.
+#   WRAPPER_BIN_DIR - Directory where the binary is downloaded to and executed from.
+#   WRAPPER_DOWNLOAD_URL - Download URL for the binary.
+#   WRAPPER_REMOTE_REPO - The URL of the remote repository hosting the script
+#   WRAPPER_REMOTE_VERSION - The version of the remote repository, used in the URL to download the script.
+#   WRAPPER_REMOTE_SCRIPT - The name of the script to be executed.
+#   WRAPPER_LOG_LEVEL - Log level of the exec wrapper.
+#
+#   EXEC_DENO_RUN_FLAGS - Command line flags for 'deno run'.
+#     See https://docs.deno.com/runtime/manual/getting_started/command_line_interface#script-arguments
+#     --reload - Reload source code cache (recompile TypeScript)
+#   EXEC_DENO_PERMISSION_FLAGS - Script permissions for 'deno run'.
+#     See https://docs.deno.com/runtime/manual/basics/permissions
+#     --allow-env - Allow environment access
+#     --allow-sys - Allow access to APIs that provide information about the operating system
+#     --allow-run - Allow running subprocesses
+#     --allow-net - Allow network access
+#     --allow-read - Allow file system read access
+#     --allow-write - Allow file system write access
+#
+#   TS_LOG_LEVEL - Log level for TypeScript programs.
+#     See https://deno.land/std/log/mod.ts?s=LogLevels
+#
+#   See the script for script specific environmental variables
+
+############################## ><8 Begin Script Snippet 8>< ##############################
+
 # Copyright 2023, Nice Guy IT, LLC. All rights reserved.
 # SPDX-License-Identifier: MIT
 # Source: https://github.com/NiceGuyIT/pimp-my-tactical
 # Version: v0.0.4
 
 """
-all-exec-wrapper will run a script from a URL. The binary is downloaded to EXEC_BIN_DIR if it doesn't exist. The
+all-exec-wrapper will run a script from a URL. The binary doesn't exist, it is downloaded to WRAPPER_BIN_DIR. The
 script is downloaded from the URL into a tmp file, and then the binary is executed passing the script as an argument.
+Note that deno does not need to download the script as it can run it directly from the command line.
 
-Uninstallation is done by removing the binaries downloaded to EXEC_BIN_DIR. all-exec-wrapper does not keep track of
+Uninstallation is done by removing the binaries downloaded to WRAPPER_BIN_DIR. all-exec-wrapper does not keep track of
 the binaries.
 
 The requests module is not a base module and required.
@@ -16,25 +62,25 @@ The requests module is not a base module and required.
 How to use Deno to specify remote URLs. Given the following script:
   https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/v0.0.1/scripts/wrapper/hello-world.ts
 set the following environment variables:
-  - EXEC_REMOTE_REPO=https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical
-  - EXEC_REMOTE_VERSION=main (git branch)
+  - WRAPPER_REMOTE_REPO=https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical
+  - WRAPPER_REMOTE_VERSION=main (git branch)
   OR
-  - EXEC_REMOTE_VERSION=v0.0.1 (git tag, versioned)
-  - EXEC_REMOTE_SCRIPT=scripts/wrapper/hello-world.ts
+  - WRAPPER_REMOTE_VERSION=v0.0.1 (git tag, versioned)
+  - WRAPPER_REMOTE_SCRIPT=scripts/wrapper/hello-world.ts
 The final form is as follows:
-  ${EXEC_REMOTE_REPO}/${EXEC_REMOTE_VERSION}/${EXEC_REMOTE_SCRIPT}
+  ${WRAPPER_REMOTE_REPO}/${WRAPPER_REMOTE_VERSION}/${WRAPPER_REMOTE_SCRIPT}
 
 Environmental variables
-- EXEC_LOG_LEVEL sets the log level.
-- EXEC_BIN_DIR is the directory to save the binaries.
+- WRAPPER_LOG_LEVEL sets the log level.
+- WRAPPER_BIN_DIR is the directory to save the binaries.
   Default:
     Windows: 'C:\\ProgramData\\exec-wrapper\\bin'
     *nix: '/opt/exec-wrapper/bin'
-- EXEC_BINARY is the program to run.
-- EXEC_DOWNLOAD_URL is the script to run. This is expected to be the raw URL, not an HTML url.
-- EXEC_REMOTE_REPO is used as the base URL to compose the remote URL for Deno. Alternative to EXEC_DOWNLOAD_URL.
-- EXEC_REMOTE_VERSION is used as the version to compose the remote URL for Deno. Alternative to EXEC_DOWNLOAD_URL.
-- EXEC_REMOTE_SCRIPT is used as the path and script to compose the remote URL for Deno. Alternative to EXEC_DOWNLOAD_URL.
+- WRAPPER_BINARY is the program to run.
+- WRAPPER_DOWNLOAD_URL is the script to run. This is expected to be the raw URL, not an HTML url.
+- WRAPPER_REMOTE_REPO is used as the base URL to compose the remote URL for Deno. Alternative to WRAPPER_DOWNLOAD_URL.
+- WRAPPER_REMOTE_VERSION is used as the version to compose the remote URL for Deno. Alternative to WRAPPER_DOWNLOAD_URL.
+- WRAPPER_REMOTE_SCRIPT is used as the path and script to compose the remote URL for Deno. Alternative to WRAPPER_DOWNLOAD_URL.
 - EXEC_DENO_RUN_FLAGS are added to the command line for 'deno run'.
 - EXEC_DENO_PERMISSION_FLAGS are added to the command line for 'deno run' to set the permissions.
   See https://deno.land/manual/basics/permissions
@@ -43,6 +89,7 @@ Environmental variables
 import logging
 import os
 import platform
+import re
 import traceback
 
 import requests
@@ -56,57 +103,49 @@ logger is the global logging instance set by get_logger().
 logger: logging.Logger = None
 
 """
-tmp_dir is global because it references a randomly generated directory.
-Note: The initial value is the system tmp directory. It's assigned a random directory in set_tmp_dir().
+config is the global configuration dict.
 """
-# tmp_dir: str | None = None
-tmp_dir: str = None
+config: dict = {
+    # variables are used by the exec wrapper (this program).
+    "wrapper": {},
 
-"""
-tmp_file is global because it references a randomly generated directory.
-Note: The initial value is the system tmp directory. It's assigned a random file in set_tmp_file().
-"""
-# tmp_file: str | None = None
-tmp_file: str = None
+    # variables that alter the commands line options for the executable.
+    "exec": {},
 
-"""
-binary is the binary name.
-"""
-# binary: str | None = None
-binary: str = None
+    # tmp_dir references a randomly generated directory.
+    # The initial value is the system tmp directory. It's assigned a random directory in set_tmp_dir().
+    "tmp_dir": None,
 
-"""
-bin_dir is the directory that holds the binaries.
-"""
-# bin_dir: str | None = None
-bin_dir: str = None
+    # tmp_file references a randomly generated directory.
+    # Note: The initial value is the system tmp directory. It's assigned a random file in set_tmp_file().
+    "tmp_file": None,
 
-"""
-bin_file is the full path to the binary.
-"""
-# bin_file: str | None = None
-bin_file: str = None
+    # bin_dir is the directory that holds the binaries.
+    "bin_dir": None,
 
+    # bin_file is the full path to the binary.
+    "bin_file": None,
+}
 
 def download_binary(binary_name: str) -> None:
     """
-    Download the binary and copy it to bin_dir.
+    Download the binary and copy it to bin_file.
     """
-    global bin_dir, bin_file, logger
+    global logger, config
 
     url = get_download_url(binary_name)
     if url is None:
         return None
 
     try:
-        logger.debug(f'Downloading binary from URL "{url}" to file "{bin_file}"')
+        logger.debug(f'Downloading binary from URL "{url}" to file "{config["bin_file"]}"')
         response = requests.get(url, stream=True)
         logger.debug(f"Status code: {response.status_code}")
-        file = open(bin_file, "wb")
+        file = open(config["bin_file"], "wb")
         file.write(response.content)
         file.close()
         response.close()
-        os.chmod(bin_file, 0o755)
+        os.chmod(config["bin_file"], 0o755)
     except:
         logger.error(f'Failed to download binary from URL "{url}"')
         raise
@@ -116,58 +155,56 @@ def download_script(url: str) -> str:
     """
     Download the script to tmp_file.
     """
-    global tmp_file, bin_dir, logger
+    global logger, config
 
     try:
-        logger.debug(f'Downloading script from URL "{url}" to file "{tmp_file}"')
+        logger.debug(f'Downloading script from URL "{url}" to file "{config["tmp_file"]}"')
         response = requests.get(url, stream=True)
         logger.debug(f"Status code: {response.status_code}")
-        file = open(tmp_file, "wb")
+        file = open(config["tmp_file"], "wb")
         file.write(response.content)
         file.close()
         response.close()
-        return tmp_file
+        return config["tmp_file"]
     except:
         logger.error(f'Failed to download binary from URL "{url}"')
         raise
 
 
-def exec_script(binary_name: str, script: str) -> str:
+def exec_script(script: str) -> str:
     """
     Execute the script as a parameter to the binary.
-    :param binary_name: Binary to execute.
-    :type binary_name: str
     :param script: Script to pass to the binary.
     :type script: str
     :return: Script output.
     :rtype: str
     """
-    global bin_file, logger
+    global logger, config
     # Run the script as a parameter to the binary.
     # Note: binary is used to determine which binary to execute while bin_file is the full path to the binary that was
     # determined earlier.
-    if binary_name == "rustpython":
-        command = [bin_file, script]
-    elif binary_name == "deno":
+    if config["wrapper"]["WRAPPER_BINARY"] == "rustpython":
+        command = [config["bin_file"], script]
+    elif config["wrapper"]["WRAPPER_BINARY"] == "deno":
         command = [
-            bin_file,
+            config["bin_file"],
             # Don't display the download progress output.
             "--quiet",
             "run",
         ]
         # Use EXEC_DENO_RUN_FLAGS=--reload to bypass the cache for development.
         # For production, the version tag will force a new version to be downloaded.
-        if "EXEC_DENO_RUN_FLAGS" in os.environ:
-            command.extend(os.getenv("EXEC_DENO_RUN_FLAGS").split())
+        if "EXEC_DENO_RUN_FLAGS" in config["exec"]:
+            command.extend(config["exec"]["EXEC_DENO_RUN_FLAGS"].split())
         # Add deno run permission flags.
-        if "EXEC_DENO_PERMISSION_FLAGS" in os.environ:
-            command.extend(os.getenv("EXEC_DENO_PERMISSION_FLAGS").split())
+        if "EXEC_DENO_PERMISSION_FLAGS" in config["exec"]:
+            command.extend(config["exec"]["EXEC_DENO_PERMISSION_FLAGS"].split())
         command.append(script)
-    elif binary_name == "nushell":
-        command = [bin_file, script]
+    elif config["wrapper"]["WRAPPER_BINARY"] == "nushell":
+        command = [config["bin_file"], script]
     else:
-        logger.error(f'Unknown binary "{binary_name}"')
-        raise ValueError(f'Unknown binary "{binary_name}"')
+        logger.error(f'Unknown binary "{config["wrapper"]["WRAPPER_BINARY"]}"')
+        raise ValueError(f'Unknown binary "{config["wrapper"]["WRAPPER_BINARY"]}"')
 
     try:
         logger.info(f'Executing "{command}"')
@@ -195,10 +232,17 @@ def is_installed(binary_name: str) -> bool:
     :return: True if the binary file exists (i.e. installed) in bin_dir; False otherwise
     :rtype: bool
     """
-    global bin_dir, logger
+    global logger, config
     exe_ext = get_exe_ext()
-    if not os.path.isfile(os.path.join(bin_dir, f"{binary_name}{exe_ext}")):
-        logger.info(f"{binary_name}{exe_ext} is not installed in {bin_dir}")
+    file_path = os.path.join(config["bin_dir"], f"{binary_name}{exe_ext}")
+    if not os.path.isfile(file_path):
+        logger.info(f'{binary_name}{exe_ext} is not installed in {config["bin_dir"]}')
+        return False
+
+    # Zero byte files represent failed downloads. Delete the file and report not installed to download again.
+    if os.path.isfile(file_path) and os.path.getsize(file_path) == 0:
+        logger.info(f'Deleting zero byte file to force download: "{file_path}"')
+        os.remove(file_path)
         return False
 
     return True
@@ -271,14 +315,13 @@ def get_os_name() -> str:
 
 def set_bin_dir() -> None:
     """
-    set_bin_dir will set the bin directory (BIN_DIR). The env variable EXEC_BIN_DIR will be used if defined.
+    set_bin_dir will set the bin directory (BIN_DIR). The env variable WRAPPER_BIN_DIR will be used if defined.
     :return: Nothing is returned.
     :rtype: None
     """
-    global bin_dir, tmp_dir
-    bin_dir = ""
-    if "EXEC_BIN_DIR" in os.environ:
-        bin_dir = os.path.normpath(os.getenv("EXEC_BIN_DIR"))
+    global config
+    if "WRAPPER_BIN_DIR" in config["wrapper"] and config["wrapper"]["WRAPPER_BIN_DIR"] != "":
+        config["bin_dir"] = os.path.normpath(config["wrapper"]["WRAPPER_BIN_DIR"])
     else:
         os_name = get_os_name()
         bin_dir_map = {
@@ -287,23 +330,21 @@ def set_bin_dir() -> None:
             "windows": "C:/ProgramData/exec-wrapper/bin",
         }
         if os_name in bin_dir_map:
-            bin_dir = os.path.normpath(bin_dir_map[os_name])
+            config["bin_dir"] = os.path.normpath(bin_dir_map[os_name])
         else:
             # Use the tmp directory as a fallback.
             set_tmp_dir()
-            bin_dir = os.path.normpath(tmp_dir)
+            config["bin_dir"] = os.path.normpath(config["tmp_dir"])
 
 
-def set_bin_file(binary: str) -> None:
+def set_bin_file() -> None:
     """
     set_bin_file will set the full path to the binary.
-    :return: The full path to the binary is returned.
-    :rtype: str
     """
-    global bin_dir, bin_file
+    global config
     exe_ext = get_exe_ext()
-    bin_file = os.path.join(bin_dir, f"{binary}{exe_ext}")
-    logger.debug(f'bin_file: "{bin_file}"')
+    config["bin_file"] = os.path.join(config["bin_dir"], f'{config["wrapper"]["WRAPPER_BINARY"]}{exe_ext}')
+    logger.debug(f'bin_file: "{config["bin_file"]}"')
 
 
 def set_tmp_dir(cleanup: bool = True):
@@ -312,15 +353,15 @@ def set_tmp_dir(cleanup: bool = True):
     :param cleanup: Should the tmp directory be automatically cleaned up?
     :type cleanup: bool
     """
-    global tmp_dir
-    if tmp_dir is None:
+    global config
+    if config["tmp_dir"] is None or config["tmp_dir"] == "":
         # tmp_dir has not been assigned yet.
         if cleanup:
             # TemporaryDirectory() will delete the directory afterward. This is used for production.
-            tmp_dir = tempfile.TemporaryDirectory().name
+            config["tmp_dir"] = tempfile.TemporaryDirectory().name
         else:
             # mkdtemp() does not delete the directory. This is used for testing purposes.
-            tmp_dir = tempfile.mkdtemp()
+            config["tmp_dir"] = tempfile.mkdtemp()
 
 
 def set_tmp_file(cleanup: bool = True):
@@ -329,25 +370,25 @@ def set_tmp_file(cleanup: bool = True):
     :param cleanup: Should the tmp directory be automatically cleaned up?
     :type cleanup: bool
     """
-    global tmp_file, binary
+    global logger, config
     suffix = ""
-    if binary == "rustpython":
+    if config["wrapper"]["WRAPPER_BINARY"] == "rustpython":
         suffix = ".py"
-    elif binary == "deno":
+    elif config["wrapper"]["WRAPPER_BINARY"] == "deno":
         suffix = ".ts"
-    elif binary == "nushell":
+    elif config["wrapper"]["WRAPPER_BINARY"] == "nushell":
         suffix = ".nu"
 
-    if tmp_file is None:
+    if config["tmp_file"] is None or config["tmp_file"] == "":
         # tmp_file has not been assigned yet.
         if cleanup:
             # TemporaryFile() will delete the file afterward. This is used for production.
-            tmp_file = tempfile.TemporaryFile(suffix=suffix).name
+            config["tmp_file"] = tempfile.TemporaryFile(suffix=suffix).name
         else:
             # mkstemp() does not delete the file. This is used for testing purposes.
             #   mkstemp() returns a tuple containing an OS-level handle to an open file (as would be returned by
             #   os.open()) and the absolute pathname of that file, in that order.
-            (_, tmp_file) = tempfile.mkstemp(suffix=suffix)
+            (_, config["tmp_file"]) = tempfile.mkstemp(suffix=suffix)
 
 
 def get_logger() -> logging.Logger:
@@ -358,7 +399,7 @@ def get_logger() -> logging.Logger:
     """
     global logger
     if logger is None:
-        log_level = os.getenv("EXEC_LOG_LEVEL", "INFO").upper()
+        log_level = os.getenv("WRAPPER_LOG_LEVEL", "INFO").upper()
         log_format = "%(asctime)s %(levelname)s %(funcName)s(%(lineno)d): %(message)s"
         logging.basicConfig(format=log_format, level=log_level)
         logger = logging.getLogger()
@@ -414,72 +455,110 @@ def get_download_url(binary_name: str) -> str:
         raise ValueError(f'Unsupported OS "{os_name}" or architecture "{arch_name}"')
 
 
+def get_config() -> None:
+    """
+    get_config will process 4 different types of keys. The keys are in the global namespace or environmental
+    variables. All variables are uppercase and contain only letters and underscores. "wrapper" and "executable"
+    variables are pulled from the environmental variables into the config. "language" and "script" variables are
+    exported to the environment for use by the script.
+
+    The config dict has two keys:
+      'wrapper' variables are used by the exec wrapper (this program).
+      'executable' variables alter the commands line options for the executable.
+    """
+    global config
+    global_vars = globals()
+    regex = re.compile(r'^([A-Z_]+)$')
+    for key in global_vars.keys():
+        if re.match(regex, key):
+            if key.startswith("WRAPPER_"):
+                config["wrapper"][key] = global_vars[key]
+            elif key.startswith("EXEC_"):
+                config["exec"][key] = global_vars[key]
+            else:
+                if key in os.environ:
+                    logger.warning(f"Not overwriting existing environmental variable '{key}'")
+                else:
+                    logger.debug(f"Exporting variable to the environment: '{key}'")
+                    os.environ[key] = global_vars[key]
+
+    for key in os.environ:
+        if re.match(regex, key):
+            if key.startswith("WRAPPER_"):
+                config["wrapper"][key] = os.environ[key]
+            elif key.startswith("EXEC_"):
+                config["exec"][key] = os.environ[key]
+
+    logger.info(f"get_config globals keys: {config}")
+
+
 def main():
     """
     The main function is to download the binary and script, and then run the binary passing the script as an argument.
     """
-    global bin_dir, bin_file, binary, tmp_dir, tmp_file, logger
+    global logger, config
 
-    if "EXEC_BINARY" in os.environ:
-        binary = os.getenv("EXEC_BINARY")
-    else:
-        logger.error("EXEC_BINARY environment variable is not defined")
-        raise ValueError("EXEC_BINARY environment variable is not defined")
+    # Get the configuration from the environment and global variables.
+    get_config()
+
+    if "WRAPPER_BINARY" not in config["wrapper"] or config["wrapper"]["WRAPPER_BINARY"] == "":
+        logger.error("WRAPPER_BINARY variable is not defined")
+        raise ValueError("WRAPPER_BINARY variable is not defined")
 
     set_tmp_file(False)
     set_bin_dir()
-    logger.debug(f"tmp_file: {tmp_file}")
-    logger.debug(f"bin_dir: {bin_dir}")
+    logger.debug(f'tmp_file: {config["tmp_file"]}')
+    logger.debug(f'bin_dir: {config["bin_dir"]}')
 
-    if not os.path.isdir(bin_dir):
+    if not os.path.isdir(config["bin_dir"]):
         # Create bin_dir and all parent directories
-        os.makedirs(bin_dir)
+        os.makedirs(config["bin_dir"])
 
-    set_bin_file(binary)
-    logger.debug(f"bin_file: {bin_file}")
+    set_bin_file()
+    logger.debug(f'bin_file: {config["bin_file"]}')
 
     try:
         # Download the binary
-        if not is_installed(binary):
-            download_binary(binary)
+        if not is_installed(config["wrapper"]["WRAPPER_BINARY"]):
+            download_binary(config["wrapper"]["WRAPPER_BINARY"])
     except:
-        logger.error(f'Failed to download the binary "{binary}"')
-        raise ValueError(f'Failed to download the binary "{binary}"')
+        logger.error(f'Failed to download the binary "{config["wrapper"]["WRAPPER_BINARY"]}"')
+        raise ValueError(f'Failed to download the binary "{config["wrapper"]["WRAPPER_BINARY"]}"')
 
-    if binary == "deno" and "EXEC_DOWNLOAD_URL" not in os.environ:
+    if config["wrapper"]["WRAPPER_BINARY"] == "deno" and "WRAPPER_DOWNLOAD_URL" not in config["wrapper"]:
         # Run Deno with a remote URL.
         if (
-            "EXEC_REMOTE_REPO" not in os.environ
-            or "EXEC_REMOTE_VERSION" not in os.environ
-            or "EXEC_REMOTE_SCRIPT" not in os.environ
+            "WRAPPER_REMOTE_REPO" not in config["wrapper"]
+            or "WRAPPER_REMOTE_VERSION" not in config["wrapper"]
+            or "WRAPPER_REMOTE_SCRIPT" not in config["wrapper"]
         ):
             logger.error(
-                f"EXEC_REMOTE_REPO, EXEC_REMOTE_VERSION, and EXEC_REMOTE_SCRIPT environment variables are not defined"
+                f"WRAPPER_REMOTE_REPO, WRAPPER_REMOTE_VERSION, and WRAPPER_REMOTE_SCRIPT variables are not defined"
             )
             raise ValueError(
-                f"EXEC_REMOTE_REPO, EXEC_REMOTE_VERSION, and EXEC_REMOTE_SCRIPT environment variables are not defined"
+                f"WRAPPER_REMOTE_REPO, WRAPPER_REMOTE_VERSION, and WRAPPER_REMOTE_SCRIPT variables are not defined"
             )
 
-        remote_url = os.getenv("EXEC_REMOTE_REPO")
-        remote_version = os.getenv("EXEC_REMOTE_VERSION")
-        remote_script = os.getenv("EXEC_REMOTE_SCRIPT")
-        script_download_url = f"{remote_url}/{remote_version}/{remote_script}"
+        remote_url = config["wrapper"]["WRAPPER_REMOTE_REPO"]
+        remote_version = config["wrapper"]["WRAPPER_REMOTE_VERSION"]
+        remote_script = config["wrapper"]["WRAPPER_REMOTE_SCRIPT"]
+        script_download_url = f'{remote_url}/{remote_version}/{remote_script}'
         try:
-            exec_script(binary, script_download_url)
+            exec_script(script_download_url)
         except:
             logger.error(
-                f'Failed to run the script "{script_download_url}" with the binary "{bin_file}"'
+                f'Failed to run the script "{script_download_url}" with the binary "{config["bin_file"]}"'
             )
             raise ValueError(
-                f'Failed to run the script "{script_download_url}" with the binary "{bin_file}"'
+                f'Failed to run the script "{script_download_url}" with the binary "{config["bin_file"]}"'
             )
     else:
         script_download_url = None
-        if "EXEC_DOWNLOAD_URL" in os.environ:
-            script_download_url = os.getenv("EXEC_DOWNLOAD_URL")
+        if "WRAPPER_DOWNLOAD_URL" in os.environ:
+            script_download_url = os.getenv("WRAPPER_DOWNLOAD_URL")
         else:
-            logger.error("EXEC_DOWNLOAD_URL environment variable is not defined")
-            raise ValueError("EXEC_DOWNLOAD_URL environment variable is not defined")
+            logger.error("WRAPPER_DOWNLOAD_URL variable is not defined")
+            raise ValueError("WRAPPER_DOWNLOAD_URL variable is not defined")
 
         script = None
         try:
@@ -494,17 +573,17 @@ def main():
             )
 
         try:
-            exec_script(binary, tmp_file)
+            exec_script(config["tmp_file"])
         except:
             logger.error(
-                f'Failed to run the script "{tmp_file}" with the binary "{bin_file}"'
+                f'Failed to run the script "{config["tmp_file"]}" with the binary "{config["bin_file"]}"'
             )
             raise ValueError(
-                f'Failed to run the script "{tmp_file}" with the binary "{bin_file}"'
+                f'Failed to run the script "{config["tmp_file"]}" with the binary "{config["bin_file"]}"'
             )
 
     # Move out of the temporary directory, so we don't prevent it from being deleted.
-    os.chdir(bin_dir)
+    os.chdir(config["bin_dir"])
 
     return
 

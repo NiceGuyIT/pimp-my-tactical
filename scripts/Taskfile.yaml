@@ -11,6 +11,24 @@ tasks:
     cmds:
       - cmd: 'task --list'
 
+  test-exec-wrapper:
+    desc: Test the exec wrapper
+    vars:
+      EXEC_LOG_LEVEL: debug
+      EXEC_BIN_DIR: /opt/exec-wrapper/bin
+      #EXEC_BIN_DIR:
+      #  sh: |
+      #    echo ${HOME}/projects/niceguyit/pimp-my-tactical/scripts/tmp
+      EXEC_BINARY: deno
+      EXEC_SCRIPT_URL: https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/main/scripts/wrapper/hello-world.ts
+    cmds:
+      - cmd: |
+          export EXEC_LOG_LEVEL='{{.EXEC_LOG_LEVEL}}'
+          export EXEC_BIN_DIR='{{.EXEC_BIN_DIR}}'
+          export EXEC_BINARY='{{.EXEC_BINARY}}'
+          export EXEC_SCRIPT_URL='{{.EXEC_SCRIPT_URL}}'
+          {{.RUST_PYTHON}} scripts/all-exec-wrapper.py
+
   test-exec-wrapper-deno:
     desc: Test the exec wrapper for Deno
     vars:
