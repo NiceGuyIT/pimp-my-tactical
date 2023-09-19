@@ -473,8 +473,14 @@ def get_config() -> None:
         if re.match(regex, key):
             if key.startswith("WRAPPER_"):
                 config["wrapper"][key] = global_vars[key]
+                if key.startswith("WRAPPER_REMOTE_"):
+                    # Export WRAPPER_REMOTE_* variables to the environment for use by the script.
+                    os.environ[key] = global_vars[key]
             elif key.startswith("EXEC_"):
                 config["exec"][key] = global_vars[key]
+                if key.startswith("EXEC_DENO_"):
+                    # Export EXEC_DENO_* variables to the environment for use by Deno.
+                    os.environ[key] = global_vars[key]
             else:
                 if key in os.environ:
                     logger.warning(f"Not overwriting existing environmental variable '{key}'")
