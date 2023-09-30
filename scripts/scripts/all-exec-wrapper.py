@@ -94,6 +94,7 @@ import traceback
 
 import requests
 import subprocess
+import sys
 import tempfile
 
 """
@@ -146,8 +147,13 @@ def download_binary(binary_name: str) -> None:
         file.close()
         response.close()
         os.chmod(config["bin_file"], 0o755)
+    except PermissionError as err2:
+        logger.error(f'PermissionError({err2.errno}): "{err2.strerror}" writing to file "{config["bin_file"]}"')
+        raise
     except:
         logger.error(f'Failed to download binary from URL "{url}"')
+        logger.error(traceback.format_exc())
+        logger.error(sys.exc_info()[0])
         raise
 
 
@@ -399,11 +405,18 @@ def get_logger() -> logging.Logger:
     """
     global logger
     if logger is None:
-        log_level = os.getenv("WRAPPER_LOG_LEVEL", "INFO").upper()
+        # Check if WRAPPER_LOG_LEVEL is in the global namespace.
+        # Global namespace takes precedence over environment variables.
+        global_vars = globals()
+        if "WRAPPER_LOG_LEVEL" in global_vars.keys():
+            log_level = global_vars["WRAPPER_LOG_LEVEL"].upper()
+        else:
+            log_level = os.getenv("WRAPPER_LOG_LEVEL", "INFO").upper()
         log_format = "%(asctime)s %(levelname)s %(funcName)s(%(lineno)d): %(message)s"
         logging.basicConfig(format=log_format, level=log_level)
         logger = logging.getLogger()
         logger.setLevel(log_level)
+        logger.info(f"Logger initialized with level: {log_level}")
     return logger
 
 
@@ -457,10 +470,11 @@ def get_download_url(binary_name: str) -> str:
 
 def get_config() -> None:
     """
-    get_config will process 4 different types of keys. The keys are in the global namespace or environmental
+    get_config will process 4 different types of keys. The keys are in the global namespace or environment
     variables. All variables are uppercase and contain only letters and underscores. "wrapper" and "executable"
     variables are pulled from the environmental variables into the config. "language" and "script" variables are
-    exported to the environment for use by the script.
+    exported to the environment for use by the script. The global namespace takes precedence over the environment
+    variables.
 
     The config dict has two keys:
       'wrapper' variables are used by the exec wrapper (this program).

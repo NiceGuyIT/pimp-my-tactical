@@ -375,11 +375,6 @@ export async function Process_Exec(cmd: string, args: string[]): Promise<string 
                 logger.warning(`(${functionName}) Args:`, args);
                 return new Error(`return code: ${returnCode}`);
             }
-
-            // Is it possible for stdout to be empty if stderr is empty and returnCode is 0?
-            if (stdout === "") {
-                logger.warning(`(${functionName}) STDOUT is empty:`, stdout);
-            }
             return stdout;
         })
         .catch((err: unknown): Error => {

@@ -2,7 +2,7 @@ import * as path from "https://deno.land/std@0.201.0/path/mod.ts";
 import * as colors from "https://deno.land/std@0.201.0/fmt/colors.ts";
 import * as datetime from "https://deno.land/std@0.201.0/datetime/mod.ts";
 import * as log from "https://deno.land/std@0.201.0/log/mod.ts";
-import * as tslib from "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/v0.1.0/scripts/ts-lib/mod.ts";
+import * as tslib from "https://raw.githubusercontent.com/NiceGuyIT/pimp-my-tactical/v0.1.1/scripts/ts-lib/mod.ts";
 
 /**
  * Configure the logging system.
