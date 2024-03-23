@@ -37,12 +37,15 @@ export def --env "trmm connect" [
 # Helper function for GET requests to TRMM.
 export def "trmm get" [
 	path: string,				# URL path to get
-	query: string = nil,		# URL query string
+	query: string = "",			# URL query string
 ]: nothing -> any {
-	let trmm = $env.TRMM
-	http get --max-time $trmm.options.max_time --headers $trmm.headers (
-		{...$trmm.url, path: $path, query: $query} | url join
-	)
+	mut url = ""
+	if ($query | is-not-empty) {
+		$url = ({...$env.TRMM.url, path: $path, query: $query} | url join)
+	} else {
+		$url = ({...$env.TRMM.url, path: $path} | url join)
+	}
+	http get --max-time $env.TRMM.options.max_time --headers $env.TRMM.headers $url
 }
 
 # Helper function for PUT requests to TRMM. $in is the body.
@@ -70,8 +73,21 @@ export def "trmm post" [
 }
 
 # Get all agents, minus their details.
-export def "trmm agents" []: nothing -> any {
-	trmm get "/agents/" "details=false"
+export def "trmm agents" [
+	--details = false			# Provide the details?
+]: nothing -> any {
+	let input = $in
+	let details = $details
+	if ($input | is-not-empty) {
+		$input | each {|it|
+			# TODO: $it assumes the raw agent_id is $input. Should it allow $it.agent_id?
+			trmm get $"/agents/($it)/" $"details=($details)"
+		}
+	} else {
+		# trmm get "/agents/" $"details=false"
+		trmm get "/agents/" $"details=($details)"
+		# trmm get "/agents/"
+	}
 }
 
 # Get all agents and their custom fields.
@@ -128,7 +144,7 @@ export def "trmm winupdate approve" []: any -> any {
 # Install Windows updates
 export def "trmm winupdate install" []: any -> any {
 	where plat == "windows" | each {|it|
-		{} | to json | trmm post $"/winupdate/($it.agent_id)/install/"
+		null | to json | trmm post $"/winupdate/($it.agent_id)/install/"
 	} | flatten
 }
 
@@ -147,11 +163,28 @@ export def main [
 		trmm agent customfields
 
 	} else if $action == 'agents' {
-		trmm agents | transpose
+		trmm agents --details true | transpose
+		#trmm agents --details true | where hostname != "my-computer" | transpose
 
+	} else if $action == 'agents-details' {
+		# The first "trmm agents" gets the agent list while the second "trmm agents" gets the details
+		trmm agents --details false | get agent_id | trmm agents | transpose
+		# trmm agents --details false | where hostname != "my-computer" | get agent_id | trmm agents | transpose
+	
+	} else if $action == 'agents-summary' {
+		# The first "trmm agents" gets the agent list while the second "trmm agents" gets the details
+		trmm agents --details false | get agent_id | trmm agents
+			| reject winupdatepolicy cpu_model local_ips physical_disks checks all_timezones custom_fields applied_policies effective_patch_policy alert_template disks wmi_detail services
+			| transpose
+		
 	} else if $action == 'agents-list' {
-		trmm agents | reject alert_template monitoring_type description needs_reboot pending_actions_count status overdue_text_alert overdue_email_alert overdue_dashboard_alert last_seen boot_time checks maintenance_mode italic block_policy_inheritance plat goarch operating_system public_ip cpu_model graphics local_ips make_model physical_disks serial_number
+		trmm agents --details false
+			| reject alert_template monitoring_type description needs_reboot pending_actions_count status overdue_text_alert overdue_email_alert overdue_dashboard_alert last_seen boot_time checks maintenance_mode italic block_policy_inheritance plat goarch operating_system public_ip cpu_model graphics local_ips make_model physical_disks serial_number
+			| transpose
 
+	} else if $action == 'agents-offline' {
+		trmm agent
+	
 	} else if $action == 'core-customfields' {
 		trmm core customfields
 
