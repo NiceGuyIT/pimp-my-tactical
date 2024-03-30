@@ -1,5 +1,10 @@
 #!/usr/bin/env nu
 
+use std log
+export-env {
+	$env.NU_LOG_LEVEL = DEBUG
+}
+
 # Connect to TRMM. --env allows exporting environment variables.
 export def --env "trmm connect" [
 	--json-connection: string,		# JSON file that contains the host and API key
@@ -148,17 +153,142 @@ export def "trmm winupdate install" []: any -> any {
 	} | flatten
 }
 
+############################################################
+# Functions for the Tactical Agent binary
+############################################################
+
+# Get the TRMM agent version.
+export def "trmm-agent version" []: string -> table<name: string, version: string> {
+	let agent_bin = $in
+	if not ($agent_bin | path exists) {
+		log error $"Agent binary not found: '($agent_bin)'"
+		return null
+	}
+	^$agent_bin -version | lines | where $it =~ "Tactical RMM Agent" | split column ':' | rename name version
+}
+
+# Create the systemd service for TRMM.
+export def "trmm-agent service create" [
+	--service-name: string = "tacticalagent"		# Systemd service name for the Tactical Agent service
+]: [string -> string, string -> nothing] {
+	let service_bin = $in
+	let service_name = $service_name
+	let service_filename = $"/etc/systemd/system/($service_name).service"
+
+	let tactical_service = $"[Unit]
+Description=Tactical RMM Linux Agent
+
+[Service]
+Type=simple
+ExecStart=($service_bin) -m svc
+User=root
+Group=root
+Restart=always
+RestartSec=5s
+LimitNOFILE=1000000
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
+"
+
+	log info $"Installing ($service_name) serviice"
+	if (whoami) != "root" {
+		$tactical_service | ^sudo tee $service_filename
+		^sudo chmod a+r $service_filename
+		^sudo systemctl daemon-reload
+		^sudo systemctl enable --now $"($service_name).service"
+	} else {
+		$tactical_service | save --force $service_filename
+		^chmod a+r $service_filename
+		^systemctl daemon-reload
+		^systemctl enable --now $"($service_name).service"
+	}
+}
+
+# TODO: The args can be improved
+# Install Tactical RMM using an existing tacticalagent binary.
+export def "trmm-agent install" [
+	--api-domain: string,					# Tactical API URL
+	--client-id: int = 1,					# Client ID for the agent
+	--site-id: int = 1,						# Site ID for the agent
+	--agent-type: string = "server"			# server or workstation
+	--agent-bin: path = "tacticalagent"		# Path to TRMM agent binary
+]: nothing -> nothing {
+	let api_domain = $api_domain
+	let client_id = $client_id
+	let site_id = $site_id
+	let agent_type = $agent_type
+	let agent_bin = ($agent_bin | path expand)
+
+	# The tacticalagent binary needs to be in the current directory.
+	if not ($agent_bin | path exists) {
+		log error $"Agent binary not found: '($agent_bin)'"
+		return
+	}
+	let agent_version = ($agent_bin | trmm-agent version)
+
+	# Tactical agent service name
+	let tacticalagent_name = "tacticalagent"
+	let tacticalagent_path = ("/usr/local/bin" | path join $tacticalagent_name)
+	
+	# Prompt for the auth secret
+	let agent_auth = (input --suppress-output "Please enter the auth code for Tactical: ")
+	print ""
+	print ""
+	if (whoami) != "root" {
+		# Remove previous config if it exists
+		if ("/etc/tacticalagent" | path exists) {
+			^sudo rm "/etc/tacticalagent"
+		}
+		^sudo $agent_bin ...[
+			-m install
+			-api ({scheme: "https", host: $api_domain} | url join)
+			-client-id $client_id
+			-site-id $site_id
+			-agent-type $agent_type
+			-auth $agent_auth
+		]
+
+		# "Install" the binary
+		^sudo cp $agent_bin $tacticalagent_path
+		^sudo chmod o+r,a+x $tacticalagent_path
+
+	} else {
+		# Remove previous config if it exists
+		if ("/etc/tacticalagent" | path exists) {
+			rm "/etc/tacticalagent"
+		}
+		^$agent_bin ...[
+			-m install
+			-api ({scheme: "https", host: $api_domain} | url join)
+			-client-id $client_id
+			-site-id $site_id
+			-agent-type $agent_type
+			-auth $agent_auth
+		]
+
+		# "Install" the binary
+		cp $agent_bin $tacticalagent_path
+		^chmod o+r,a+x $tacticalagent_path
+
+	}
+
+	$tacticalagent_path | trmm-agent service create --service-name $tacticalagent_name
+}
+
 
 export def main [
 	--json-connection: string = ".trmm.json",		# JSON file that contains the host and API key
-	action?: string,								# Action to take: [agent-customfields|agents|core-customfields]
+	action: string,									# Action to take: [agent-customfields|agents|core-customfields]
+	...args: any									# Action specific args
 ]: [nothing -> any] {
 	let json_connection = $json_connection
 	let action = $action
+	let args = $args
 	trmm connect --json-connection $json_connection
 	$env.TRMM
 
-	
 	if $action == 'agent-customfields' {
 		trmm agent customfields
 
@@ -207,6 +337,12 @@ export def main [
 	} else if $action == 'winupdate-install' {
 		trmm agents | trmm winupdate install
 
+	} else if $action == 'trmm-agent-install' {
+		# FIXME: rest params don't work unless they are added to the function definition.
+		#trmm-agent install $args
+		log debug $"Args: "
+		print ...$args
+	
 	} else {
 		# Self help :)
 		^$env.CURRENT_FILE --help
