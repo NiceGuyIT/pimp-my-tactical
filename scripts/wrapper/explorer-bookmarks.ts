@@ -133,8 +133,8 @@ const bookmarksConfig: BookmarksConfig = {
 		maxNumFiles: {
 			min: 1,
 			max: 1000,
-			default: 20,
-			current: 20,
+			default: 50,
+			current: 200,
 		},
 	},
 	restore: {
